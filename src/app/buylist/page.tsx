@@ -9,16 +9,16 @@ type BuylistOffer = {
   id: string;
   buy_percentage: number;
   payment_method: string;
-  store: { 
+  store?: { 
     name: string; 
     whatsapp: string; // Corrigido de contact para whatsapp
-  };
-  card: {
+  } | null;
+  card?: {
     name: string;
     card_number: string;
     image_url: string;
     price_history: { price_avg: number; created_at: string }[];
-  };
+  } | null;
 };
 
 export default function BuylistPanel() {
@@ -69,7 +69,7 @@ export default function BuylistPanel() {
   useEffect(() => { fetchOffers(); }, []);
 
   const filteredOffers = offers.filter(o => 
-    o.card.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (o.card?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -101,16 +101,16 @@ export default function BuylistPanel() {
         ) : (
           <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {filteredOffers.map((offer) => {
-              const marketPrice = offer.card.price_history?.[0]?.price_avg || 0;
+              const marketPrice = offer.card?.price_history?.[0]?.price_avg || 0;
               const storePrice = marketPrice * (offer.buy_percentage / 100);
 
               return (
                 <div key={offer.id} className="group bg-slate-900 p-4 border border-slate-800 hover:border-orange-500/30 rounded-2xl transition-all">
                   <div className="flex gap-4 mb-4">
-                    <img src={offer.card.image_url} className="shadow-md rounded-lg w-20 h-28 object-cover" alt="" />
+                    <img src={offer.card?.image_url || 'https://via.placeholder.com/80x112?text=Carta'} className="shadow-md rounded-lg w-20 h-28 object-cover" alt="" />
                     <div className="flex-1">
-                      <p className="font-mono text-[10px] text-slate-500 uppercase">{offer.card.card_number}</p>
-                      <h3 className="mb-1 font-bold text-slate-200 leading-tight">{offer.card.name}</h3>
+                      <p className="font-mono text-[10px] text-slate-500 uppercase">{offer.card?.card_number || 'N/D'}</p>
+                      <h3 className="mb-1 font-bold text-slate-200 leading-tight">{offer.card?.name || 'Carta indisponível'}</h3>
                       <div className="flex items-center gap-1 text-slate-400 text-xs">
                         <TrendingDown className="w-3 h-3 text-red-400" />
                         Mkt: R$ {marketPrice.toFixed(2)}
@@ -131,12 +131,12 @@ export default function BuylistPanel() {
                   </div>
 
                   <a 
-                    href={`https://wa.me/${offer.store?.whatsapp}?text=Olá, vi no BountyTracker que vocês estão comprando a carta ${offer.card.name}. Ainda está valendo?`}
+                    href={offer.store?.whatsapp ? `https://wa.me/${offer.store.whatsapp}?text=Olá, vi no BountyTracker que vocês estão comprando a carta ${offer.card?.name || 'informada'}. Ainda está valendo?` : '#'}
                     target="_blank"
-                    className="flex justify-center items-center gap-2 bg-slate-800 hover:bg-emerald-600 py-2 rounded-lg w-full font-bold text-white text-sm transition-all"
+                    className={`flex justify-center items-center gap-2 py-2 rounded-lg w-full font-bold text-white text-sm transition-all ${offer.store?.whatsapp ? 'bg-slate-800 hover:bg-emerald-600' : 'bg-slate-700 cursor-not-allowed pointer-events-none'}`}
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Chamar no WhatsApp
+                    {offer.store?.whatsapp ? 'Chamar no WhatsApp' : 'WhatsApp indisponível'}
                   </a>
                 </div>
               );
@@ -149,7 +149,7 @@ export default function BuylistPanel() {
             <AlertTriangle className="mx-auto w-12 h-12 text-slate-700" />
             <p className="text-slate-500">Nenhuma oferta de compra ativa no momento.</p>
             <p className="mx-auto max-w-xs text-slate-600 text-xs">
-                Certifique-se de ter cadastrado ofertas na tabela <code className="bg-slate-900 px-0.5 px-1">store_buylists</code> vinculando cartas às lojas.
+                Certifique-se de ter cadastrado ofertas na tabela <code className="bg-slate-900 px-1">store_buylists</code> vinculando cartas às lojas.
             </p>
           </div>
         )}

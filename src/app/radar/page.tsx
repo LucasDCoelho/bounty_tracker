@@ -13,7 +13,7 @@ type Tournament = {
   entry_fee: number;
   format: string;
   max_players: number;
-  store: { name: string; whatsapp: string; address: string };
+  store?: { name: string; whatsapp: string; address: string } | null;
 };
 
 export default function TournamentRadar() {
@@ -86,7 +86,7 @@ export default function TournamentRadar() {
                       <div className="gap-3 grid grid-cols-1 sm:grid-cols-2 text-slate-500 text-sm">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-orange-500" />
-                          <span className="truncate">{event.store.name} - {event.store.address}</span>
+                          <span className="truncate">{event.store?.name || 'Loja não informada'}{event.store?.address ? ` - ${event.store.address}` : ''}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Ticket className="w-4 h-4 text-orange-500" />
@@ -98,12 +98,12 @@ export default function TournamentRadar() {
                     {/* Action */}
                     <div className="flex justify-center items-center bg-slate-950/50 p-6 border-slate-800 border-t md:border-t-0 md:border-l">
                       <a 
-                        href={`https://wa.me/${event.store.whatsapp}?text=Olá! Gostaria de me inscrever no torneio ${event.name} do dia ${dateFormatted}.`}
+                        href={event.store?.whatsapp ? `https://wa.me/${event.store.whatsapp}?text=Olá! Gostaria de me inscrever no torneio ${event.name} do dia ${dateFormatted}.` : '#'}
                         target="_blank"
-                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-2xl font-bold text-white whitespace-nowrap transition-all"
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-white text-center transition-all ${event.store?.whatsapp ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 cursor-not-allowed pointer-events-none'}`}
                       >
                         <MessageCircle className="w-5 h-5" />
-                        Garantir Vaga
+                        {event.store?.whatsapp ? 'Garantir Vaga' : 'Contato indisponível'}
                       </a>
                     </div>
                   </div>

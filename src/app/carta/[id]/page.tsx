@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { enqueueTradeCard, savePendingDeckCard } from '@/lib/flow-bridge';
 import {
     ComposedChart,
     Bar,
@@ -13,7 +14,7 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
-import { ArrowLeft, AlertCircle, CheckCircle2, PlusCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle2, PlusCircle, ArrowRightLeft, Layers } from 'lucide-react';
 
 
 // Componente Interno para desenhar a "Vela" (SVG Customizado)
@@ -104,17 +105,55 @@ export default function CardDetails() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return router.push('/login');
 
+        const parsedTarget = Number(targetPrice);
+        if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+            alert('Informe um preço-alvo válido maior que zero.');
+            return;
+        }
+
         const { error } = await supabase.from('user_alerts').insert([
             {
                 user_id: user.id,
                 card_id: cardId,
-                target_price: parseFloat(targetPrice),
+                target_price: parsedTarget,
                 current_price_at_creation: precoAtual
             }
         ]);
 
         if (!error) alert("Bounty definido! Te avisaremos no Telegram.");
     };
+
+    const sendToCalculator = () => {
+        if (!card) return;
+
+        enqueueTradeCard({
+            id: card.id,
+            name: card.name,
+            card_number: card.card_number,
+            image_url: card.image_url,
+            price: precoAtual,
+            discount: 20,
+            side: 'A',
+        });
+
+        router.push('/calculadora?source=carta');
+    };
+
+    const sendToDeckbuilder = () => {
+        if (!card) return;
+
+        savePendingDeckCard({
+            id: card.id,
+            name: card.name,
+            card_number: card.card_number,
+            image_url: card.image_url,
+            rarity: card.rarity,
+            price: precoAtual,
+        });
+
+        router.push('/deckbuilder?source=carta');
+    };
+
     // FUNÇÃO NOVA: Adiciona à Carteira
     const addToCollection = async () => {
         setIsAdding(true);
@@ -153,6 +192,12 @@ export default function CardDetails() {
     if (!card) return <div className="flex flex-col justify-center items-center bg-slate-950 min-h-screen text-white"><AlertCircle className="mb-4 w-16 h-16 text-red-500" /><h1 className="font-bold text-2xl">Carta não encontrada</h1></div>;
 
     const precoAtual = card.price_history[card.price_history.length - 1]?.price_avg || 0;
+    const parsedTargetPrice = Number(targetPrice);
+    const hasTargetInput = targetPrice.trim().length > 0;
+    const isTargetPriceValid = Number.isFinite(parsedTargetPrice) && parsedTargetPrice > 0;
+    const targetPriceError = hasTargetInput && !isTargetPriceValid
+        ? 'Informe um preço-alvo válido maior que zero.'
+        : '';
 
     // Transformar o histórico de preços para o formato de Trading (Candlestick)
     const chartData = card.price_history.map((ph: any, index: number) => {
@@ -190,6 +235,23 @@ export default function CardDetails() {
                             </div>
                             <h1 className="font-black text-white text-4xl">{card.name}</h1>
                             <p className="text-slate-400">{card.set?.name}</p>
+
+                            <div className="flex flex-wrap gap-2 mt-4">
+                                <button
+                                    onClick={sendToCalculator}
+                                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg font-bold text-white text-xs transition-all"
+                                >
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                    Levar para Calculadora
+                                </button>
+                                <button
+                                    onClick={sendToDeckbuilder}
+                                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg font-bold text-white text-xs transition-all"
+                                >
+                                    <Layers className="w-4 h-4" />
+                                    Levar para Deckbuilder
+                                </button>
+                            </div>
                         </div>
 
                         <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
@@ -206,12 +268,21 @@ export default function CardDetails() {
                                             placeholder="R$ 0,00"
                                             value={targetPrice}
                                             onChange={(e) => setTargetPrice(e.target.value)}
+                                            min="0.01"
+                                            step="0.01"
                                             className="flex-1 bg-slate-900 px-3 py-2 border border-slate-700 focus:border-orange-500 rounded-lg outline-none text-white text-sm"
                                         />
-                                        <button onClick={createAlert} className="bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-lg font-bold text-white text-sm transition-all">
+                                        <button
+                                            onClick={createAlert}
+                                            disabled={!isTargetPriceValid}
+                                            className="bg-orange-600 hover:bg-orange-500 disabled:bg-slate-700 disabled:hover:bg-slate-700 px-4 py-2 rounded-lg font-bold text-white text-sm transition-all disabled:cursor-not-allowed"
+                                        >
                                             Ativar Alerta
                                         </button>
                                     </div>
+                                    {targetPriceError && (
+                                        <p className="mt-2 text-[11px] text-red-400">{targetPriceError}</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -245,7 +316,7 @@ export default function CardDetails() {
                                 </div>
                             </div>
 
-                            <div className="w-full h-[300px]">
+                            <div className="w-full h-75">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ComposedChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />

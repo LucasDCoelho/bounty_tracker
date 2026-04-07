@@ -8,11 +8,11 @@ import { ArrowLeft, Bell, BellOff, TrendingDown, Trash2, Plus, Loader2 } from 'l
 type Alert = {
   id: string;
   target_price: number;
-  card: {
+  card?: {
     name: string;
     image_url: string;
     price_history: { price_avg: number }[];
-  };
+  } | null;
 };
 
 export default function PriceAlerts() {
@@ -37,7 +37,9 @@ export default function PriceAlerts() {
 
       if (data) {
         // Ordena preços para pegar o mais atual
-        const formatted = data.map((item: any) => ({
+        const formatted = data
+          .filter((item: any) => item.card !== null)
+          .map((item: any) => ({
           ...item,
           card: {
             ...item.card,
@@ -45,7 +47,7 @@ export default function PriceAlerts() {
               new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             )
           }
-        }));
+          }));
         setAlerts(formatted);
       }
     }

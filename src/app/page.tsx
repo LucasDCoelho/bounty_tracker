@@ -79,7 +79,7 @@ export default function Home() {
       <header className="mx-auto mb-10 max-w-7xl">
         <div className="flex md:flex-row flex-col justify-between md:items-center gap-6">
           <div>
-            <h1 className="bg-clip-text bg-gradient-to-r from-orange-500 to-amber-300 font-extrabold text-transparent text-4xl">
+            <h1 className="bg-clip-text bg-linear-to-r from-orange-500 to-amber-300 font-extrabold text-transparent text-4xl">
               BountyTracker
             </h1>
             <p className="mt-1 text-slate-400">Mercado em tempo real de One Piece TCG</p>
@@ -141,6 +141,21 @@ export default function Home() {
       </header>
 
       <section className="mx-auto max-w-7xl">
+        <div className="gap-3 grid grid-cols-1 md:grid-cols-3 mb-8">
+          <Link href="/calculadora" className="group bg-emerald-500/10 hover:bg-emerald-500/20 p-4 border border-emerald-500/20 rounded-xl transition-all">
+            <p className="font-black text-emerald-300 text-sm uppercase tracking-wider">Quero negociar agora</p>
+            <p className="mt-1 text-slate-300 text-sm">Abra a Calculadora com desconto por carta para fechar troca no balcão.</p>
+          </Link>
+          <Link href="/deckbuilder" className="group bg-indigo-500/10 hover:bg-indigo-500/20 p-4 border border-indigo-500/20 rounded-xl transition-all">
+            <p className="font-black text-indigo-300 text-sm uppercase tracking-wider">Quero montar deck</p>
+            <p className="mt-1 text-slate-300 text-sm">Construa 50 + líder com validação de cópias para não errar na montagem.</p>
+          </Link>
+          <Link href="/radar" className="group bg-orange-500/10 hover:bg-orange-500/20 p-4 border border-orange-500/20 rounded-xl transition-all">
+            <p className="font-black text-orange-300 text-sm uppercase tracking-wider">Quero jogar hoje</p>
+            <p className="mt-1 text-slate-300 text-sm">Veja torneios locais e entre em contato direto com a loja via WhatsApp.</p>
+          </Link>
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-20"><div className="border-orange-500 border-t-2 rounded-full w-12 h-12 animate-spin"></div></div>
         ) : (

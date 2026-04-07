@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { enqueueTradeCard } from '@/lib/flow-bridge';
 import { createWorker } from 'tesseract.js';
 import { ArrowLeft, Zap, Target, Loader2, Camera, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation'; // <-- Importação corrigida aqui
@@ -18,6 +19,22 @@ export default function CardScanner() {
   const [lastScannedNumber, setLastScannedNumber] = useState("");
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [foundCard, setFoundCard] = useState<any>(null);
+
+  const handleLaunchToCalculator = () => {
+    if (!foundCard) return;
+
+    enqueueTradeCard({
+      id: foundCard.id,
+      name: foundCard.name,
+      card_number: lastScannedNumber,
+      image_url: foundCard.image_url,
+      price: foundCard.price_history?.[0]?.price_avg || 0,
+      side: 'A',
+      discount: 20,
+    });
+
+    router.push('/calculadora?source=scanner');
+  };
 
   const startCamera = async () => {
     setIsLoading(true);
@@ -103,7 +120,7 @@ export default function CardScanner() {
           <Link href="/" className="inline-flex items-center text-slate-400 hover:text-orange-500 transition-colors">
             <ArrowLeft className="mr-2 w-5 h-5" /> Sair
           </Link>
-          <h1 className="flex items-center gap-2 bg-clip-text bg-gradient-to-r from-orange-500 to-amber-300 font-black text-transparent text-2xl">
+          <h1 className="flex items-center gap-2 bg-clip-text bg-linear-to-r from-orange-500 to-amber-300 font-black text-transparent text-2xl">
             Scanner Yonko <Zap className="w-6 h-6 text-orange-500" />
           </h1>
         </header>
@@ -140,7 +157,7 @@ export default function CardScanner() {
                         </div>
                     </div>
                     <button 
-                        onClick={() => router.push('/calculadora')}
+                      onClick={handleLaunchToCalculator}
                         className="flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-500 shadow-lg py-3 rounded-xl w-full font-bold text-white transition-all"
                     >
                         <CheckCircle className="w-5 h-5" />

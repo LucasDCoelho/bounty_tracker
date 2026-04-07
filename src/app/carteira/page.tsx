@@ -144,7 +144,8 @@ export default function Portfolio() {
         {/* Tabela de Ativos */}
         <div className="bg-slate-900 shadow-2xl border border-slate-800 rounded-2xl overflow-hidden">
           {collection.length > 0 ? (
-            <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-140 text-left border-collapse">
               <thead className="bg-slate-950 font-bold text-slate-500 text-xs uppercase tracking-wider">
                 <tr>
                   <th className="p-4">Carta</th>
@@ -172,6 +173,7 @@ export default function Portfolio() {
                 })}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="space-y-4 p-20 text-center">
               <div className="flex justify-center items-center bg-slate-800 mx-auto rounded-full w-16 h-16 text-slate-500">

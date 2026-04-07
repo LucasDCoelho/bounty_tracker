@@ -1,19 +1,27 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { useAuthSession } from '@/hooks/use-auth-session';
 import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
   const router = useRouter();
+  const { session, loading: loadingSession } = useAuthSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    if (!loadingSession && session) {
+      router.replace('/');
+    }
+  }, [loadingSession, router, session]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +31,12 @@ export default function Login() {
 
     if (isLogin) {
       // Tenta Logar
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-      else router.push('/'); // Sucesso! Manda para o Dashboard
+      else if (data.session) {
+        router.replace('/');
+        router.refresh();
+      }
     } else {
       // Tenta Cadastrar
       const { error } = await supabase.auth.signUp({ email, password });
@@ -35,11 +46,19 @@ export default function Login() {
     setLoading(false);
   };
 
+  if (loadingSession) {
+    return (
+      <main className="flex justify-center items-center bg-slate-950 p-4 min-h-screen text-slate-300">
+        Validando sessao...
+      </main>
+    );
+  }
+
   return (
     <main className="flex justify-center items-center bg-slate-950 p-4 min-h-screen">
       <div className="bg-slate-900 shadow-2xl p-8 border border-slate-800 rounded-2xl w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="flex justify-center items-center gap-2 bg-clip-text bg-gradient-to-r from-orange-500 to-amber-300 mb-2 font-black text-transparent text-3xl">
+          <h1 className="flex justify-center items-center gap-2 bg-clip-text bg-linear-to-r from-orange-500 to-amber-300 mb-2 font-black text-transparent text-3xl">
             BountyTracker <ShieldCheck className="w-8 h-8 text-orange-500" />
           </h1>
           <p className="text-slate-400">Entre para gerenciar sua carteira de TCG</p>

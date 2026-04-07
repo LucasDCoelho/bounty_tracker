@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { consumePendingDeckCard } from '@/lib/flow-bridge';
 import { ArrowLeft, Search, Plus, Minus, Trash2, Layers } from 'lucide-react';
 
 type Card = {
@@ -20,12 +22,52 @@ type DeckItem = {
 };
 
 export default function Deckbuilder() {
+  const searchParams = useSearchParams();
   const [leader, setLeader] = useState<Card | null>(null);
   const [deck, setDeck] = useState<DeckItem[]>([]);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Card[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  const source = searchParams.get('source');
+
+  useEffect(() => {
+    const pending = consumePendingDeckCard();
+    if (!pending) return;
+
+    const incoming: Card = {
+      id: pending.id,
+      name: pending.name,
+      card_number: pending.card_number,
+      image_url: pending.image_url,
+      rarity: pending.rarity,
+      price: pending.price,
+    };
+
+    if (incoming.rarity === 'L') {
+      setLeader(incoming);
+      return;
+    }
+
+    setDeck((prev) => {
+      const total = prev.reduce((acc, item) => acc + item.quantity, 0);
+      if (total >= 50) return prev;
+
+      const existing = prev.find((item) => item.card.card_number === incoming.card_number);
+      if (existing && existing.quantity >= 4) return prev;
+
+      if (existing) {
+        return prev.map((item) =>
+          item.card.card_number === incoming.card_number
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+
+      return [...prev, { card: incoming, quantity: 1 }];
+    });
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,15 +152,21 @@ export default function Deckbuilder() {
             <ArrowLeft className="mr-2 w-5 h-5" />
             Voltar
           </Link>
-          <h1 className="flex items-center gap-2 bg-clip-text bg-gradient-to-r from-orange-500 to-amber-300 font-bold text-transparent text-2xl">
+          <h1 className="flex items-center gap-2 bg-clip-text bg-linear-to-r from-orange-500 to-amber-300 font-bold text-transparent text-2xl">
             Deckbuilder <Layers className="w-6 h-6 text-orange-500" />
           </h1>
         </header>
 
+        {source && (
+          <div className="bg-indigo-500/10 mb-4 px-4 py-2 border border-indigo-500/20 rounded-lg text-indigo-300 text-xs">
+            Carta recebida do fluxo: <span className="font-bold uppercase">{source}</span>
+          </div>
+        )}
+
         <div className="gap-8 grid grid-cols-1 lg:grid-cols-12">
           
           {/* Coluna Esquerda: Busca e Resultados */}
-          <div className="flex flex-col lg:col-span-5 bg-slate-900 p-4 border border-slate-800 rounded-xl h-[80vh]">
+          <div className="flex flex-col lg:col-span-5 bg-slate-900 p-4 border border-slate-800 rounded-xl lg:h-[80vh]">
             <form onSubmit={handleSearch} className="flex mb-4">
               <input 
                 type="text" 
@@ -141,7 +189,7 @@ export default function Deckbuilder() {
                   <div className="flex items-center gap-3">
                     <img src={card.image_url} alt={card.name} className="shadow-sm rounded w-12 h-16 object-cover" />
                     <div>
-                      <p className="max-w-[150px] font-bold text-sm truncate">{card.name}</p>
+                      <p className="max-w-37.5 font-bold text-sm truncate">{card.name}</p>
                       <div className="flex items-center gap-2">
                         <span className="bg-amber-500/10 px-1.5 py-0.5 rounded font-bold text-[10px] text-amber-500">{card.rarity}</span>
                         <span className="text-slate-500 text-xs">{card.card_number}</span>
@@ -161,7 +209,7 @@ export default function Deckbuilder() {
           </div>
 
           {/* Coluna Direita: O Deck Montado */}
-          <div className="flex flex-col lg:col-span-7 bg-slate-900 p-4 border border-slate-800 rounded-xl h-[80vh]">
+          <div className="flex flex-col lg:col-span-7 bg-slate-900 p-4 border border-slate-800 rounded-xl lg:h-[80vh]">
             
             {/* Stats do Deck */}
             <div className="flex justify-between items-center bg-slate-950 mb-6 p-4 border border-slate-800 rounded-lg">
@@ -217,7 +265,7 @@ export default function Deckbuilder() {
                         <div className="flex items-center gap-3">
                           <img src={item.card.image_url} alt={item.card.name} className="rounded w-10 h-14 object-cover" />
                           <div>
-                            <p className="max-w-[200px] font-bold text-sm truncate">{item.card.name}</p>
+                            <p className="max-w-50 font-bold text-sm truncate">{item.card.name}</p>
                             <p className="text-slate-500 text-xs">{item.card.card_number} • R$ {item.card.price.toFixed(2)}</p>
                           </div>
                         </div>
