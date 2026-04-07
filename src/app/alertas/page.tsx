@@ -81,15 +81,18 @@ export default function PriceAlerts() {
         ) : (
           <div className="gap-4 grid">
             {alerts.map((alert) => {
-              const currentPrice = alert.card.price_history?.[0]?.price_avg || 0;
+              const card = alert.card;
+              if (!card) return null;
+
+              const currentPrice = card.price_history?.[0]?.price_avg || 0;
               const diff = currentPrice - alert.target_price;
 
               return (
                 <div key={alert.id} className="group flex items-center gap-4 bg-slate-900 p-4 border border-slate-800 rounded-2xl">
-                  <img src={alert.card.image_url} className="shadow-lg rounded-lg w-16 h-22 object-cover" alt="" />
+                  <img src={card.image_url} className="shadow-lg rounded-lg w-16 h-22 object-cover" alt="" />
                   
                   <div className="flex-1">
-                    <h3 className="font-bold text-lg">{alert.card.name}</h3>
+                    <h3 className="font-bold text-lg">{card.name}</h3>
                     <div className="flex items-center gap-4 mt-1">
                       <div className="text-slate-500 text-xs">
                         Alvo: <span className="font-bold text-orange-400">R$ {alert.target_price.toFixed(2)}</span>

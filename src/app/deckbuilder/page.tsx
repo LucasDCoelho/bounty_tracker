@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { consumePendingDeckCard } from '@/lib/flow-bridge';
 import { ArrowLeft, Search, Plus, Minus, Trash2, Layers } from 'lucide-react';
@@ -22,17 +21,17 @@ type DeckItem = {
 };
 
 export default function Deckbuilder() {
-  const searchParams = useSearchParams();
   const [leader, setLeader] = useState<Card | null>(null);
   const [deck, setDeck] = useState<DeckItem[]>([]);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Card[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  const source = searchParams.get('source');
+  const [source, setSource] = useState<string | null>(null);
 
   useEffect(() => {
+    setSource(new URLSearchParams(window.location.search).get('source'));
+
     const pending = consumePendingDeckCard();
     if (!pending) return;
 

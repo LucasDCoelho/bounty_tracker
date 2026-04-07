@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { clearTradeSession, consumeTradeQueue, loadTradeSession, saveTradeSession } from '@/lib/flow-bridge';
 import { ArrowLeft, Plus, Trash2, Search, ArrowRightLeft, Percent } from 'lucide-react';
@@ -26,7 +25,6 @@ type TradeSnapshot = {
 };
 
 export default function Calculator() {
-  const searchParams = useSearchParams();
   const [leftCards, setLeftCards] = useState<Card[]>([]);
   const [rightCards, setRightCards] = useState<Card[]>([]);
   
@@ -37,8 +35,7 @@ export default function Calculator() {
   const [history, setHistory] = useState<TradeSnapshot[]>([]);
   const [actionLog, setActionLog] = useState<string[]>([]);
   const [undoToast, setUndoToast] = useState(false);
-
-  const source = searchParams.get('source');
+  const [source, setSource] = useState<string | null>(null);
 
   const addCardToSide = (card: Card, side: TradeSide) => {
     if (side === 'A') setLeftCards((prev) => [...prev, card]);
@@ -77,6 +74,8 @@ export default function Calculator() {
   });
 
   useEffect(() => {
+    setSource(new URLSearchParams(window.location.search).get('source'));
+
     const savedSession = loadTradeSession();
     if (savedSession) {
       setLeftCards(savedSession.leftCards.map((item) => normalizeBridgeCard(item)));
