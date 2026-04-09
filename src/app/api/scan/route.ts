@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     });
 
     const detections = result.textAnnotations;
-    const fullText = detections && detections.length > 0 ? detections.description : '';
+    const fullText = detections && detections.length > 0 ? detections[0]?.description || '' : '';
 
     if (!fullText) {
       return NextResponse.json({ error: 'Nenhum texto detectado' }, { status: 404 });
