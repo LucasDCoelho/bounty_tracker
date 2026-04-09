@@ -7,6 +7,128 @@ import { enqueueTradeCard } from '@/lib/flow-bridge';
 import { ArrowLeft, Zap, Target, Loader2, Camera, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation'; // <-- Importação corrigida aqui
 
+type CardResult = {
+  id: string;
+  name: string;
+  card_number: string;
+  image_url: string;
+  price_history?: { price_avg?: number | null }[];
+};
+
+type ScanApiResult = {
+  code?: string | null;
+  codes?: string[];
+  nameHints?: string[];
+  fullText?: string;
+  error?: string;
+};
+
+const SIGNATURE_SIZE = 24;
+const MIN_VISUAL_CONFIDENCE = 0.72;
+
+function dedupeCards(cards: CardResult[]) {
+  const seen = new Set<string>();
+  return cards.filter((card) => {
+    if (seen.has(card.id)) return false;
+    seen.add(card.id);
+    return true;
+  });
+}
+
+function normalizeCodes(result: ScanApiResult) {
+  const codes = Array.isArray(result.codes) ? result.codes : [];
+  if (result.code) {
+    codes.unshift(result.code);
+  }
+
+  return Array.from(
+    new Set(
+      codes
+        .map((code) => String(code || '').trim().toUpperCase())
+        .filter(Boolean)
+    )
+  );
+}
+
+function getNameHints(result: ScanApiResult) {
+  if (!Array.isArray(result.nameHints)) return [];
+  return result.nameHints
+    .map((hint) => String(hint || '').trim())
+    .filter((hint) => hint.length >= 3)
+    .slice(0, 3);
+}
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Falha ao carregar imagem para comparação visual.'));
+    img.src = src;
+  });
+}
+
+async function buildSignature(src: string) {
+  const image = await loadImage(src);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+
+  if (!context) {
+    throw new Error('Canvas indisponível para assinatura visual.');
+  }
+
+  canvas.width = SIGNATURE_SIZE;
+  canvas.height = SIGNATURE_SIZE;
+  context.drawImage(image, 0, 0, SIGNATURE_SIZE, SIGNATURE_SIZE);
+
+  const { data } = context.getImageData(0, 0, SIGNATURE_SIZE, SIGNATURE_SIZE);
+  const signature = new Float32Array(SIGNATURE_SIZE * SIGNATURE_SIZE);
+
+  for (let i = 0; i < signature.length; i += 1) {
+    const base = i * 4;
+    const r = data[base];
+    const g = data[base + 1];
+    const b = data[base + 2];
+    signature[i] = r * 0.299 + g * 0.587 + b * 0.114;
+  }
+
+  return signature;
+}
+
+function similarityScore(a: Float32Array, b: Float32Array) {
+  if (a.length !== b.length) return 0;
+
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff += Math.abs(a[i] - b[i]);
+  }
+
+  const avgDiff = diff / a.length;
+  return Math.max(0, 1 - avgDiff / 255);
+}
+
+async function findBestVisualMatch(capturedDataUrl: string, candidates: CardResult[]) {
+  const capturedSignature = await buildSignature(capturedDataUrl);
+  let best: { card: CardResult; score: number } | null = null;
+
+  for (const candidate of candidates) {
+    if (!candidate.image_url) continue;
+
+    try {
+      const cardSignature = await buildSignature(candidate.image_url);
+      const score = similarityScore(capturedSignature, cardSignature);
+
+      if (!best || score > best.score) {
+        best = { card: candidate, score };
+      }
+    } catch {
+      // Ignora candidato que não consegue carregar imagem/CORS.
+    }
+  }
+
+  return best;
+}
+
 export default function CardScanner() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -17,7 +139,8 @@ export default function CardScanner() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastScannedNumber, setLastScannedNumber] = useState("");
   const [isCameraActive, setIsCameraActive] = useState(false);
-  const [foundCard, setFoundCard] = useState<any>(null);
+  const [foundCard, setFoundCard] = useState<CardResult | null>(null);
+  const [visualConfidence, setVisualConfidence] = useState<number | null>(null);
 
   const handleLaunchToCalculator = () => {
     if (!foundCard) return;
@@ -25,7 +148,7 @@ export default function CardScanner() {
     enqueueTradeCard({
       id: foundCard.id,
       name: foundCard.name,
-      card_number: lastScannedNumber,
+      card_number: foundCard.card_number || lastScannedNumber,
       image_url: foundCard.image_url,
       price: foundCard.price_history?.[0]?.price_avg || 0,
       side: 'A',
@@ -71,6 +194,36 @@ export default function CardScanner() {
 
     setIsProcessing(true);
     setFoundCard(null);
+    setVisualConfidence(null);
+
+    const fetchCardsByCodes = async (codes: string[]) => {
+      if (!codes.length) return [] as CardResult[];
+
+      const { data, error } = await supabase
+        .from('cards')
+        .select('id, name, card_number, image_url, price_history(price_avg)')
+        .in('card_number', codes)
+        .limit(20);
+
+      if (error || !data) return [];
+      return data as CardResult[];
+    };
+
+    const fetchCardsByNameHints = async (nameHints: string[]) => {
+      for (const hint of nameHints) {
+        const { data, error } = await supabase
+          .from('cards')
+          .select('id, name, card_number, image_url, price_history(price_avg)')
+          .ilike('name', `%${hint}%`)
+          .limit(25);
+
+        if (!error && data && data.length > 0) {
+          return data as CardResult[];
+        }
+      }
+
+      return [] as CardResult[];
+    };
 
     try {
       const video = videoRef.current;
@@ -92,27 +245,48 @@ export default function CardScanner() {
         body: JSON.stringify({ image: imageData }),
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as ScanApiResult;
 
-      if (response.ok && result.code) {
-        const cardNumber = result.code;
-        setLastScannedNumber(cardNumber);
-        
-        // Mantém a sua lógica de buscar no Supabase
-        const { data } = await supabase
-          .from('cards')
-          .select('id, name, image_url, price_history(price_avg)')
-          .eq('card_number', cardNumber)
-          .single();
-
-        if (data) {
-            setFoundCard(data);
-        } else {
-            alert(`Código ${cardNumber} encontrado, mas não está no banco de dados.`);
-        }
-      } else {
-        alert("Código não detectado. " + (result.error || "Tente novamente."));
+      if (!response.ok) {
+        alert("Não foi possível ler a carta. " + (result.error || "Tente novamente."));
+        return;
       }
+
+      const detectedCodes = normalizeCodes(result);
+      const nameHints = getNameHints(result);
+
+      const [cardsByCode, cardsByName] = await Promise.all([
+        fetchCardsByCodes(detectedCodes),
+        fetchCardsByNameHints(nameHints),
+      ]);
+
+      const candidates = dedupeCards([...cardsByCode, ...cardsByName]);
+
+      if (!candidates.length) {
+        alert('Texto detectado, mas não achei carta correspondente no banco.');
+        return;
+      }
+
+      const bestVisual = await findBestVisualMatch(imageData, candidates);
+
+      if (!bestVisual) {
+        alert('Não consegui comparar a imagem capturada com as cartas do banco.');
+        return;
+      }
+
+      const fallbackCode = detectedCodes[0] || bestVisual.card.card_number;
+
+      if (bestVisual.score < MIN_VISUAL_CONFIDENCE && cardsByCode.length > 0) {
+        const firstCodeMatch = cardsByCode[0];
+        setFoundCard(firstCodeMatch);
+        setLastScannedNumber(firstCodeMatch.card_number || fallbackCode);
+        setVisualConfidence(bestVisual.score);
+        return;
+      }
+
+      setFoundCard(bestVisual.card);
+      setLastScannedNumber(bestVisual.card.card_number || fallbackCode);
+      setVisualConfidence(bestVisual.score);
     } catch (err) {
       console.error("Erro no Scanner:", err);
       alert("Erro ao conectar com o servidor de escaneamento.");
@@ -161,6 +335,11 @@ export default function CardScanner() {
                             <p className="font-mono font-bold text-primary">{lastScannedNumber}</p>
                             <h3 className="font-black text-foreground text-xl">{foundCard.name}</h3>
                             <p className="font-bold text-success">R$ {foundCard.price_history?.[0]?.price_avg?.toFixed(2) || "---"}</p>
+                            {visualConfidence !== null && (
+                              <p className="text-muted-foreground text-xs">
+                                Similaridade visual: {(visualConfidence * 100).toFixed(1)}%
+                              </p>
+                            )}
                         </div>
                     </div>
                     <button 

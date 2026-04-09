@@ -10,6 +10,27 @@ const client = new vision.ImageAnnotatorClient({
   },
 });
 
+const opCodeRegex = /[A-Z]{2}\d{2}-\d{3}/g;
+const opCodeLineRegex = /[A-Z]{2}\d{2}-\d{3}/;
+
+function extractNameHints(fullText: string) {
+  const normalized = fullText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 4)
+    .filter((line) => !/^[\d\W_]+$/.test(line))
+    .filter((line) => !opCodeLineRegex.test(line.toUpperCase()))
+    .filter((line) => !/(BANDAI|ONE\s*PIECE|CARD\s*GAME|ENGLISH|JAPANESE)/i.test(line));
+
+  const uniqueHints = Array.from(new Set(normalized.map((line) => line.replace(/\s+/g, ' '))));
+  return uniqueHints.slice(0, 5);
+}
+
+function extractCodes(fullText: string) {
+  const matches = fullText.toUpperCase().match(opCodeRegex) || [];
+  return Array.from(new Set(matches));
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -34,16 +55,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum texto detectado' }, { status: 404 });
     }
 
-    // Aplica a sua Regex de One Piece no texto retornado pelo Google
-    const opCodeRegex = /[A-Z]{2}\d{2}-\d{3}/g;
-    const matches = fullText.toUpperCase().match(opCodeRegex);
+    const codes = extractCodes(fullText);
+    const nameHints = extractNameHints(fullText);
 
-    if (matches && matches.length > 0) {
-      // Retorna o primeiro código encontrado
-      return NextResponse.json({ code: matches });
-    } else {
-      return NextResponse.json({ error: 'Código da carta não encontrado na imagem' }, { status: 404 });
-    }
+    return NextResponse.json({
+      code: codes[0] || null,
+      codes,
+      nameHints,
+      fullText,
+    });
 
   } catch (error) {
     console.error('Erro na API de Scan:', error);
