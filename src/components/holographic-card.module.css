@@ -1,0 +1,279 @@
+.holographicCardContainer {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 0.718; /* Proporção de carta Pokémon */
+
+  /* CSS Variables para controlar o efeito */
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --card-opacity: 0.5;
+
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.cardRotator {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: grid;
+  grid-area: 1/1;
+  transform-style: preserve-3d;
+  transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y));
+  transition: transform 0.1s ease-out;
+  border-radius: 1rem;
+  box-shadow:
+    0 0 3px -1px rgba(255, 255, 255, 0.3),
+    0 0 3px 1px rgba(0, 184, 212, 0.3),
+    0 0 12px 2px rgba(0, 255, 200, 0.2),
+    0px 10px 20px -5px rgba(0, 0, 0, 0.5),
+    0 2px 15px -5px rgba(0, 0, 0, 0.3),
+    0 0 20px 0px rgba(0, 184, 212, 0.1);
+  transition: box-shadow 0.4s ease, all 0.3s ease;
+}
+
+.cardRotator:hover {
+  box-shadow:
+    0 0 3px -1px rgba(255, 255, 255, 0.8),
+    0 0 3px 1px rgba(0, 184, 212, 0.8),
+    0 0 12px 2px rgba(0, 255, 200, 0.5),
+    0px 15px 30px -5px rgba(0, 0, 0, 0.8),
+    0 4px 20px -3px rgba(0, 0, 0, 0.6),
+    0 0 60px -10px rgba(0, 255, 200, 0.5);
+}
+
+.cardFront {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-area: 1/1;
+  border-radius: 1rem;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: optimizeQuality;
+  border-radius: 1rem;
+  transform: translate3d(0px, 0px, 0.01px);
+}
+
+/* Camada de Brilho Holográfico */
+.cardShine {
+  grid-area: 1/1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  pointer-events: none;
+  transform: translateZ(1px);
+  overflow: hidden;
+  z-index: 3;
+  will-change: background-image, background-position, opacity, background-size;
+
+  /* Efeito Base Holográfico Multi-camadas */
+  background-image:
+    /* Gradiente radial main seguindo o mouse - Luz branca */
+    radial-gradient(
+      circle at var(--pointer-x) var(--pointer-y),
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(200, 255, 255, 0.2) 15%,
+      rgba(100, 255, 200, 0.1) 35%,
+      transparent 70%
+    ),
+    /* Rainbow gradient de arco-íris */
+    linear-gradient(
+      -45deg,
+      rgba(255, 0, 128, 0.1),
+      rgba(0, 255, 200, 0.1),
+      rgba(0, 100, 255, 0.1),
+      rgba(255, 128, 0, 0.1)
+    ),
+    /* Linhas holográficas diagonais (V-pattern) */
+    repeating-linear-gradient(
+      45deg,
+      transparent 0px,
+      transparent 12px,
+      rgba(0, 255, 200, 0.08) 12px,
+      rgba(0, 255, 200, 0.08) 24px,
+      transparent 24px,
+      transparent 36px
+    ),
+    /* Linhas holográficas horizontais */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 15px,
+      rgba(100, 200, 255, 0.05) 15px,
+      rgba(100, 200, 255, 0.05) 30px
+    ),
+    /* Shimmer vertical sutil */
+    repeating-linear-gradient(
+      0deg,
+      rgba(200, 255, 255, 0.02) 0px,
+      rgba(200, 255, 255, 0.02) 3px,
+      transparent 3px,
+      transparent 12px
+    );
+
+  background-size:
+    200% 200%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+
+  background-position:
+    var(--pointer-x) var(--pointer-y),
+    0 0,
+    0 0,
+    0 0,
+    0 0;
+
+  mix-blend-mode: color-dodge;
+  filter: brightness(0.85) contrast(2) saturate(1.3);
+  opacity: calc(var(--card-opacity) * 0.85);
+  background-color: rgba(0, 184, 212, 0.01);
+}
+
+/* Pseudo-elemento do shine para scanlines e textura */
+.cardShine::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  background-image: 
+    /* Scanlines para simular efeito de vidro texturizado */
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    /* Dot pattern sutil */
+    radial-gradient(
+      2px 2px at 20px 30px,
+      rgba(255, 255, 255, 0.02),
+      transparent 2px
+    );
+  background-size: 100% 100%, 40px 60px;
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Camada de Brilho / Glare */
+.cardGlare {
+  grid-area: 1/1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  pointer-events: none;
+  transform: translateZ(1.41px);
+  overflow: hidden;
+  z-index: 2;
+  will-change: background-image, opacity;
+
+  background-image: 
+    /* Glare radial intenso que segue o mouse */
+    radial-gradient(
+      ellipse 600px 400px at var(--pointer-x) var(--pointer-y),
+      rgba(255, 255, 255, 1) 0%,
+      rgba(255, 255, 255, 0.6) 15%,
+      rgba(200, 255, 255, 0.2) 40%,
+      rgba(100, 200, 255, 0.05) 65%,
+      transparent 100%
+    ),
+    /* Glare secundário para mais profundidade */
+    radial-gradient(
+      ellipse at calc(var(--pointer-x) + 15%) calc(var(--pointer-y) - 10%),
+      rgba(255, 255, 255, 0.3) 0%,
+      transparent 60%
+    );
+
+  opacity: calc(var(--card-opacity) * 0.6);
+  mix-blend-mode: soft-light;
+  filter: brightness(1.05) contrast(1.1);
+  background-size: 
+    200% 200%,
+    150% 150%;
+  background-position: 
+    var(--pointer-x) var(--pointer-y),
+    center center;
+}
+
+/* Pseudo-elemento para adicionar um segundo glare subtil */
+.cardGlare::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image:
+    /* Hard-light glare para mais brilho */
+    radial-gradient(
+      circle at var(--pointer-x) var(--pointer-y),
+      rgba(255, 200, 100, 0.15) 0%,
+      transparent 50%
+    );
+  mix-blend-mode: hard-light;
+  opacity: 0.3;
+}
+
+/* Animação ao fazer hover - mais intenso */
+@media (hover: hover) {
+  .holographicCardContainer:hover .cardShine {
+    opacity: --card-opacity;
+    filter: brightness(0.85) contrast(2.8) saturate(1.6);
+  }
+
+  .holographicCardContainer:hover .cardGlare {
+    opacity: calc(var(--card-opacity) * 0.85);
+    filter: brightness(1.2) contrast(1.3);
+  }
+
+  .holographicCardContainer:hover .cardImage {
+    filter: brightness(1.05) saturate(1.1);
+  }
+}
+
+/* Efeito de glow quando em hover */
+.holographicCardContainer:hover {
+  filter: drop-shadow(0 0 20px rgba(0, 255, 200, 0.4));
+}
+
+/* Responsive para mobile */
+@media (max-width: 768px) {
+  .cardRotator {
+    transform: rotateY(0deg) rotateX(0deg) !important;
+  }
+
+  .cardShine {
+    opacity: 0.4;
+  }
+
+  .cardGlare {
+    opacity: 0.15;
+  }
+
+  .holographicCardContainer:hover .cardShine {
+    opacity: 0.6;
+  }
+
+  .holographicCardContainer:hover .cardGlare {
+    opacity: 0.3;
+  }
+}

@@ -544,9 +544,9 @@ export default function LojistaPage() {
 
   if (loading) {
     return (
-      <main className="flex justify-center items-center bg-slate-950 min-h-screen text-slate-300">
+      <main className="flex justify-center items-center bg-background min-h-screen text-muted-foreground">
         <div className="flex items-center gap-2">
-          <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
           Carregando painel lojista...
         </div>
       </main>
@@ -554,28 +554,28 @@ export default function LojistaPage() {
   }
 
   return (
-    <main className="bg-slate-950 p-4 md:p-8 min-h-screen text-slate-100">
+    <main className="bg-background p-4 md:p-8 min-h-screen text-foreground">
       <div className="mx-auto max-w-6xl">
         <header className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-3 mb-8">
-          <Link href="/perfil" className="inline-flex items-center text-slate-400 hover:text-orange-500 transition-colors">
+          <Link href="/perfil" className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors">
             <ArrowLeft className="mr-2 w-5 h-5" />
             Voltar ao Perfil
           </Link>
           <h1 className="flex items-center gap-2 font-black text-2xl">
-            Painel do Lojista <Store className="w-6 h-6 text-orange-500" />
+            Painel do Lojista <Store className="w-6 h-6 text-primary" />
           </h1>
         </header>
 
-        {error && <p className="bg-red-500/10 mb-4 px-4 py-2 border border-red-500/40 rounded-lg text-red-400 text-sm">{error}</p>}
-        {message && <p className="bg-emerald-500/10 mb-4 px-4 py-2 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm">{message}</p>}
+        {error && <p className="bg-danger/10 mb-4 px-4 py-2 border border-danger/30 rounded-lg text-danger text-sm">{error}</p>}
+        {message && <p className="bg-success/10 mb-4 px-4 py-2 border border-success/30 rounded-lg text-success text-sm">{message}</p>}
 
         {!store ? (
-          <section className="bg-slate-900 p-5 md:p-6 border border-slate-800 rounded-2xl">
+          <section className="bg-surface shadow-black/10 shadow-xl p-5 md:p-6 border border-border rounded-2xl">
             <h2 className="flex items-center gap-2 mb-4 font-bold text-xl">
-              <Building2 className="w-5 h-5 text-orange-500" />
+              <Building2 className="w-5 h-5 text-primary" />
               Cadastrar Minha Loja
             </h2>
-            <p className="mb-6 text-slate-400 text-sm">
+            <p className="mb-6 text-muted-foreground text-sm">
               Este fluxo e separado do usuario comum. Use uma conta de lojista para gerir eventos e buylist.
             </p>
 
@@ -586,33 +586,33 @@ export default function LojistaPage() {
                 value={storeForm.name}
                 onChange={(e) => setStoreForm((p) => ({ ...p, name: e.target.value }))}
                 placeholder="Nome da loja"
-                className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
               />
               <input
                 type="text"
                 value={storeForm.city}
                 onChange={(e) => setStoreForm((p) => ({ ...p, city: e.target.value }))}
                 placeholder="Cidade"
-                className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
               />
               <input
                 type="text"
                 value={storeForm.whatsapp}
                 onChange={(e) => setStoreForm((p) => ({ ...p, whatsapp: e.target.value }))}
                 placeholder="WhatsApp (somente numeros)"
-                className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
               />
               <input
                 type="text"
                 value={storeForm.instagram}
                 onChange={(e) => setStoreForm((p) => ({ ...p, instagram: e.target.value }))}
                 placeholder="Instagram"
-                className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
               />
               <button
                 type="submit"
                 disabled={saving}
-                className="md:col-span-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 px-4 py-3 rounded-lg font-bold text-white transition-colors"
+                className="md:col-span-2 bg-primary hover:bg-primary/90 disabled:opacity-60 px-4 py-3 rounded-lg font-bold text-primary-foreground transition-colors"
               >
                 {saving ? 'Criando loja...' : 'Criar Loja'}
               </button>
@@ -621,25 +621,25 @@ export default function LojistaPage() {
         ) : (
           <div className="space-y-6">
             <section className="gap-3 grid grid-cols-2 lg:grid-cols-4">
-              <div className="bg-slate-900 p-4 border border-slate-800 rounded-xl">
-                <p className="text-slate-500 text-xs uppercase tracking-wider">Eventos</p>
-                <p className="font-black text-sky-400 text-2xl">{kpis.totalEvents}</p>
+              <div className="bg-surface p-4 border border-border rounded-xl">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Eventos</p>
+                <p className="font-black text-info text-2xl">{kpis.totalEvents}</p>
               </div>
-              <div className="bg-slate-900 p-4 border border-slate-800 rounded-xl">
-                <p className="text-slate-500 text-xs uppercase tracking-wider">Ativos</p>
-                <p className="font-black text-emerald-400 text-2xl">{kpis.activeEvents}</p>
+              <div className="bg-surface p-4 border border-border rounded-xl">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Ativos</p>
+                <p className="font-black text-success text-2xl">{kpis.activeEvents}</p>
               </div>
-              <div className="bg-slate-900 p-4 border border-slate-800 rounded-xl">
-                <p className="text-slate-500 text-xs uppercase tracking-wider">Buylist Ativa</p>
-                <p className="font-black text-orange-400 text-2xl">{kpis.activeBuylist}</p>
+              <div className="bg-surface p-4 border border-border rounded-xl">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Buylist Ativa</p>
+                <p className="font-black text-primary text-2xl">{kpis.activeBuylist}</p>
               </div>
-              <div className="bg-slate-900 p-4 border border-slate-800 rounded-xl">
-                <p className="text-slate-500 text-xs uppercase tracking-wider">Media % Compra</p>
-                <p className="font-black text-indigo-400 text-2xl">{kpis.avgBuyPct.toFixed(1)}%</p>
+              <div className="bg-surface p-4 border border-border rounded-xl">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Media % Compra</p>
+                <p className="font-black text-secondary text-2xl">{kpis.avgBuyPct.toFixed(1)}%</p>
               </div>
             </section>
 
-            <section className="bg-slate-900 p-5 border border-slate-800 rounded-2xl">
+            <section className="bg-surface shadow-black/10 shadow-xl p-5 border border-border rounded-2xl">
               <div className="flex items-center gap-4">
                 <img
                   src={store.logo_url || 'https://via.placeholder.com/80x80?text=Loja'}
@@ -647,14 +647,14 @@ export default function LojistaPage() {
                   className="rounded-xl w-14 h-14 object-cover"
                 />
                 <div>
-                  <p className="font-black text-white text-lg">{store.name}</p>
-                  <p className="text-slate-400 text-sm">@{store.slug} • {store.city}</p>
-                  <p className="text-slate-500 text-xs">WhatsApp: {store.whatsapp || 'Nao informado'}</p>
+                  <p className="font-black text-foreground text-lg">{store.name}</p>
+                  <p className="text-muted-foreground text-sm">@{store.slug} • {store.city}</p>
+                  <p className="text-muted-foreground text-xs">WhatsApp: {store.whatsapp || 'Nao informado'}</p>
                 </div>
               </div>
             </section>
 
-            <section className="bg-slate-900 p-5 border border-slate-800 rounded-2xl">
+            <section className="bg-surface shadow-black/10 shadow-xl p-5 border border-border rounded-2xl">
               <h3 className="mb-4 font-bold text-lg">Editar Loja</h3>
               <form onSubmit={updateStoreSettings} className="gap-4 grid grid-cols-1 md:grid-cols-2">
                 <input
@@ -663,46 +663,46 @@ export default function LojistaPage() {
                   value={storeSettingsForm.name}
                   onChange={(e) => setStoreSettingsForm((p) => ({ ...p, name: e.target.value }))}
                   placeholder="Nome da loja"
-                  className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                  className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
                 />
                 <input
                   type="text"
                   value={storeSettingsForm.city}
                   onChange={(e) => setStoreSettingsForm((p) => ({ ...p, city: e.target.value }))}
                   placeholder="Cidade"
-                  className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                  className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
                 />
                 <input
                   type="text"
                   value={storeSettingsForm.whatsapp}
                   onChange={(e) => setStoreSettingsForm((p) => ({ ...p, whatsapp: e.target.value }))}
                   placeholder="WhatsApp"
-                  className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                  className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
                 />
                 <input
                   type="text"
                   value={storeSettingsForm.instagram}
                   onChange={(e) => setStoreSettingsForm((p) => ({ ...p, instagram: e.target.value }))}
                   placeholder="Instagram"
-                  className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                  className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
                 />
                 <input
                   type="url"
                   value={storeSettingsForm.logoUrl}
                   onChange={(e) => setStoreSettingsForm((p) => ({ ...p, logoUrl: e.target.value }))}
                   placeholder="URL da logo"
-                  className="md:col-span-2 bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-lg outline-none"
+                  className="md:col-span-2 bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none text-foreground"
                 />
                 {storeSettingsForm.logoUrl && (
-                  <div className="flex items-center gap-3 md:col-span-2 bg-slate-950 p-3 border border-slate-800 rounded-lg">
+                  <div className="flex items-center gap-3 md:col-span-2 bg-background p-3 border border-border rounded-lg">
                     <img src={storeSettingsForm.logoUrl} alt="Preview logo" className="rounded w-12 h-12 object-cover" />
-                    <p className="text-slate-400 text-xs">Preview da logo da loja</p>
+                    <p className="text-muted-foreground text-xs">Preview da logo da loja</p>
                   </div>
                 )}
                 <button
                   type="submit"
                   disabled={saving}
-                  className="md:col-span-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 py-3 rounded-lg font-bold text-white"
+                  className="md:col-span-2 bg-primary hover:bg-primary/90 disabled:opacity-60 py-3 rounded-lg font-bold text-primary-foreground transition-colors"
                 >
                   Salvar Dados da Loja
                 </button>
@@ -710,9 +710,9 @@ export default function LojistaPage() {
             </section>
 
             <section className="gap-6 grid grid-cols-1 lg:grid-cols-2">
-              <div className="bg-slate-900 p-5 border border-slate-800 rounded-2xl">
+              <div className="bg-surface shadow-black/10 shadow-xl p-5 border border-border rounded-2xl">
                 <h3 className="flex items-center gap-2 mb-4 font-bold text-lg">
-                  <CalendarPlus className="w-5 h-5 text-sky-400" /> Criar Evento
+                  <CalendarPlus className="w-5 h-5 text-info" /> Criar Evento
                 </h3>
 
                 <form onSubmit={createTournament} className="space-y-3">
@@ -722,20 +722,20 @@ export default function LojistaPage() {
                     value={tournamentForm.name}
                     onChange={(e) => setTournamentForm((p) => ({ ...p, name: e.target.value }))}
                     placeholder="Nome do evento"
-                    className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-sky-500 rounded-lg outline-none w-full"
+                    className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                   />
                   <input
                     type="datetime-local"
                     required
                     value={tournamentForm.eventDate}
                     onChange={(e) => setTournamentForm((p) => ({ ...p, eventDate: e.target.value }))}
-                    className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-sky-500 rounded-lg outline-none w-full"
+                    className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                   />
                   <div className="gap-3 grid grid-cols-2">
                     <select
                       value={tournamentForm.gameId}
                       onChange={(e) => setTournamentForm((p) => ({ ...p, gameId: e.target.value }))}
-                      className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-sky-500 rounded-lg outline-none w-full"
+                      className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                     >
                       <option value="">Jogo (opcional)</option>
                       {games.map((game) => (
@@ -747,7 +747,7 @@ export default function LojistaPage() {
                       value={tournamentForm.format}
                       onChange={(e) => setTournamentForm((p) => ({ ...p, format: e.target.value }))}
                       placeholder="Formato"
-                      className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-sky-500 rounded-lg outline-none w-full"
+                      className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                     />
                   </div>
                   <div className="gap-3 grid grid-cols-2">
@@ -758,13 +758,13 @@ export default function LojistaPage() {
                       value={tournamentForm.entryFee}
                       onChange={(e) => setTournamentForm((p) => ({ ...p, entryFee: e.target.value }))}
                       placeholder="Entrada"
-                      className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-sky-500 rounded-lg outline-none w-full"
+                      className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="bg-sky-600 hover:bg-sky-500 disabled:opacity-60 py-3 rounded-lg w-full font-bold"
+                    className="bg-info hover:bg-info/90 disabled:opacity-60 py-3 rounded-lg w-full font-bold text-info-foreground transition-colors"
                   >
                     Publicar Evento
                   </button>
@@ -772,22 +772,22 @@ export default function LojistaPage() {
 
                 <div className="space-y-2 mt-5">
                   {tournaments.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center bg-slate-950 p-3 border border-slate-800 rounded-lg">
+                    <div key={item.id} className="flex justify-between items-center bg-background p-3 border border-border rounded-lg">
                       <div>
                         <p className="font-bold text-sm">{item.name}</p>
-                        <p className="text-slate-500 text-xs">{new Date(item.event_date).toLocaleString('pt-BR')} • {item.format} • {item.game_id ? (gameNameById.get(item.game_id) || 'Jogo') : 'Sem jogo'}</p>
+                        <p className="text-muted-foreground text-xs">{new Date(item.event_date).toLocaleString('pt-BR')} • {item.format} • {item.game_id ? (gameNameById.get(item.game_id) || 'Jogo') : 'Sem jogo'}</p>
                       </div>
-                      <button onClick={() => toggleTournament(item)} className="text-slate-400 hover:text-white text-xs">
-                        {item.is_active ? <ToggleRight className="w-6 h-6 text-emerald-400" /> : <ToggleLeft className="w-6 h-6 text-slate-500" />}
+                      <button onClick={() => toggleTournament(item)} className="text-muted-foreground hover:text-foreground text-xs">
+                        {item.is_active ? <ToggleRight className="w-6 h-6 text-success" /> : <ToggleLeft className="w-6 h-6 text-muted-foreground" />}
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-5 border border-slate-800 rounded-2xl">
+              <div className="bg-surface shadow-black/10 shadow-xl p-5 border border-border rounded-2xl">
                 <h3 className="flex items-center gap-2 mb-4 font-bold text-lg">
-                  <Tag className="w-5 h-5 text-emerald-400" /> Gerir Buylist
+                  <Tag className="w-5 h-5 text-success" /> Gerir Buylist
                 </h3>
 
                 <form onSubmit={createBuylistItem} className="space-y-3">
@@ -799,7 +799,7 @@ export default function LojistaPage() {
                       setCardQuery('');
                       setCardOptions([]);
                     }}
-                    className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-emerald-500 rounded-lg outline-none w-full"
+                    className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                   >
                     <option value="">Filtrar cartas por jogo (opcional)</option>
                     {games.map((game) => (
@@ -808,7 +808,7 @@ export default function LojistaPage() {
                   </select>
 
                   <div className="relative">
-                    <Search className="top-3 left-3 absolute w-4 h-4 text-slate-500" />
+                    <Search className="top-3 left-3 absolute w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       value={cardQuery}
@@ -817,12 +817,12 @@ export default function LojistaPage() {
                         searchCards(e.target.value);
                       }}
                       placeholder="Buscar carta para buylist"
-                      className="bg-slate-950 py-3 pr-4 pl-9 border border-slate-700 focus:border-emerald-500 rounded-lg outline-none w-full"
+                      className="bg-background py-3 pr-4 pl-9 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                     />
                   </div>
 
                   {cardOptions.length > 0 && (
-                    <div className="space-y-2 bg-slate-950 p-2 border border-slate-800 rounded-lg max-h-52 overflow-y-auto">
+                    <div className="space-y-2 bg-background p-2 border border-border rounded-lg max-h-52 overflow-y-auto">
                       {cardOptions.map((card) => (
                         <button
                           key={card.id}
@@ -832,12 +832,12 @@ export default function LojistaPage() {
                             setCardQuery(`${card.card_number} - ${card.name}`);
                             setCardOptions([]);
                           }}
-                          className="flex items-center gap-2 hover:bg-slate-800 p-2 rounded w-full text-left"
+                          className="flex items-center gap-2 hover:bg-accent p-2 rounded w-full text-left"
                         >
                           <img src={card.image_url} alt={card.name} className="rounded w-8 h-11 object-cover" />
                           <div>
                             <p className="font-bold text-sm">{card.name}</p>
-                            <p className="text-slate-500 text-xs">{card.card_number}</p>
+                            <p className="text-muted-foreground text-xs">{card.card_number}</p>
                           </div>
                         </button>
                       ))}
@@ -852,21 +852,21 @@ export default function LojistaPage() {
                       value={buylistForm.buyPercentage}
                       onChange={(e) => setBuylistForm((p) => ({ ...p, buyPercentage: e.target.value }))}
                       placeholder="% pago"
-                      className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-emerald-500 rounded-lg outline-none w-full"
+                      className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                     />
                     <input
                       type="text"
                       value={buylistForm.paymentMethod}
                       onChange={(e) => setBuylistForm((p) => ({ ...p, paymentMethod: e.target.value }))}
                       placeholder="Metodo"
-                      className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-emerald-500 rounded-lg outline-none w-full"
+                      className="bg-background px-4 py-3 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={!canCreateBuylist || saving}
-                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 py-3 rounded-lg w-full font-bold"
+                    className="bg-success hover:bg-success/90 disabled:opacity-60 py-3 rounded-lg w-full font-bold text-success-foreground transition-colors"
                   >
                     Salvar Oferta
                   </button>
@@ -874,16 +874,16 @@ export default function LojistaPage() {
 
                 <div className="space-y-2 mt-5">
                   {buylist.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center bg-slate-950 p-3 border border-slate-800 rounded-lg">
+                    <div key={item.id} className="flex justify-between items-center bg-background p-3 border border-border rounded-lg">
                       <div className="flex items-center gap-3 min-w-0">
                         <img src={item.card?.image_url || 'https://via.placeholder.com/32x44?text=C'} alt="" className="rounded w-8 h-11 object-cover" />
                         <div className="min-w-0">
                           <p className="font-bold text-sm truncate">{item.card?.name || 'Carta indisponivel'}</p>
-                          <p className="text-slate-500 text-xs">{item.buy_percentage}% em {item.payment_method}</p>
+                          <p className="text-muted-foreground text-xs">{item.buy_percentage}% em {item.payment_method}</p>
                         </div>
                       </div>
-                      <button onClick={() => toggleBuylist(item)} className="text-slate-400 hover:text-white text-xs">
-                        {item.is_active ? <ToggleRight className="w-6 h-6 text-emerald-400" /> : <ToggleLeft className="w-6 h-6 text-slate-500" />}
+                      <button onClick={() => toggleBuylist(item)} className="text-muted-foreground hover:text-foreground text-xs">
+                        {item.is_active ? <ToggleRight className="w-6 h-6 text-success" /> : <ToggleLeft className="w-6 h-6 text-muted-foreground" />}
                       </button>
                     </div>
                   ))}

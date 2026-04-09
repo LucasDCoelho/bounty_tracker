@@ -37,9 +37,9 @@ export default function Home() {
     if (data) setSets(data);
   };
 
-  const fetchMarketData = async () => {
+  const fetchMarketData = async (pageOverride = page) => {
     setIsLoading(true);
-    const from = (page - 1) * pageSize;
+    const from = (pageOverride - 1) * pageSize;
     const to = from + pageSize - 1;
 
     let query = supabase
@@ -58,7 +58,7 @@ export default function Home() {
 
     if (!error) {
       setCards(data as Card[]);
-      if (count) setTotalCount(count);
+      setTotalCount(count ?? 0);
     }
     setIsLoading(false);
   };
@@ -69,43 +69,43 @@ export default function Home() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    fetchMarketData();
+    fetchMarketData(1);
   };
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
-    <main className="bg-slate-950 p-4 md:p-8 min-h-screen text-slate-100">
+    <main className="bg-background p-4 md:p-8 min-h-screen text-foreground">
       <header className="mx-auto mb-10 max-w-7xl">
-        <div className="flex md:flex-row flex-col justify-between md:items-center gap-6">
+        <div className="flex md:flex-row flex-col justify-between md:items-center gap-6 bg-surface/75 shadow-black/5 shadow-xl backdrop-blur-sm p-6 border border-border rounded-4xl">
           <div>
-            <h1 className="bg-clip-text bg-linear-to-r from-orange-500 to-amber-300 font-extrabold text-transparent text-4xl">
+            <h1 className="bg-clip-text bg-linear-to-r from-primary to-secondary font-extrabold text-transparent text-4xl">
               BountyTracker
             </h1>
-            <p className="mt-1 text-slate-400">Mercado em tempo real de One Piece TCG</p>
+            <p className="mt-1 text-muted-foreground">Mercado em tempo real de One Piece TCG</p>
 
             <div className="flex flex-wrap gap-3 mt-4">
-              <Link href="/calculadora" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 border border-slate-700 rounded-lg font-bold text-orange-500 text-sm transition-all">
+              <Link href="/calculadora" className="inline-flex items-center gap-2 bg-background hover:bg-accent px-4 py-2 border border-border rounded-lg font-bold text-primary text-sm transition-all">
                 <ArrowRightLeft className="w-4 h-4" />
                 Calculadora
               </Link>
-              <Link href="/deckbuilder" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 border border-slate-700 rounded-lg font-bold text-indigo-400 text-sm transition-all">
+              <Link href="/deckbuilder" className="inline-flex items-center gap-2 bg-background hover:bg-accent px-4 py-2 border border-border rounded-lg font-bold text-secondary text-sm transition-all">
                 <Layers className="w-4 h-4" />
                 Deckbuilder
               </Link>
-              <Link href="/carteira" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 border border-slate-700 rounded-lg font-bold text-emerald-400 text-sm transition-all">
+              <Link href="/carteira" className="inline-flex items-center gap-2 bg-background hover:bg-accent px-4 py-2 border border-border rounded-lg font-bold text-success text-sm transition-all">
                 <Wallet className="w-4 h-4" />
                 Minha Carteira
               </Link>
-              <Link href="/buylist" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 border border-slate-700 rounded-lg font-bold text-amber-500 text-sm transition-all">
+              <Link href="/buylist" className="inline-flex items-center gap-2 bg-background hover:bg-accent px-4 py-2 border border-border rounded-lg font-bold text-warning text-sm transition-all">
                 <Store className="w-4 h-4" />
                 Buylist Lojas
               </Link>
-              <Link href="/radar" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 border border-slate-700 rounded-lg font-bold text-sky-400 text-sm transition-all">
+              <Link href="/radar" className="inline-flex items-center gap-2 bg-background hover:bg-accent px-4 py-2 border border-border rounded-lg font-bold text-info text-sm transition-all">
                 <Calendar className="w-4 h-4" />
                 Radar de Torneios
               </Link>
-              <Link href="/scanner" className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 border border-slate-700 rounded-lg font-bold text-amber-500 text-sm transition-all">
+              <Link href="/scanner" className="inline-flex items-center gap-2 bg-background hover:bg-accent px-4 py-2 border border-border rounded-lg font-bold text-primary text-sm transition-all">
                 <Zap className="w-4 h-4" />
                 Abrir Scanner (BETA)
               </Link>
@@ -116,7 +116,7 @@ export default function Home() {
             <select
               value={selectedSet}
               onChange={(e) => { setSelectedSet(e.target.value); setPage(1); }}
-              className="bg-slate-900 px-4 py-2 border border-slate-700 focus:border-orange-500 rounded-md outline-none text-white"
+              className="bg-background px-4 py-2 border border-border focus:border-primary rounded-md outline-none text-foreground"
             >
               <option value="">Todas as Coleções</option>
               {sets.map(s => (
@@ -130,9 +130,9 @@ export default function Home() {
                 placeholder="Buscar por nome..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-slate-900 px-4 py-2 border border-slate-700 focus:border-orange-500 rounded-l-md outline-none w-full text-white"
+                className="bg-background px-4 py-2 border border-border focus:border-primary rounded-l-md outline-none w-full text-foreground"
               />
-              <button type="submit" className="bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-r-md font-bold transition-colors">
+              <button type="submit" className="bg-primary hover:bg-primary/90 px-4 py-2 rounded-r-md font-bold text-primary-foreground transition-colors">
                 Buscar
               </button>
             </form>
@@ -142,22 +142,22 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl">
         <div className="gap-3 grid grid-cols-1 md:grid-cols-3 mb-8">
-          <Link href="/calculadora" className="group bg-emerald-500/10 hover:bg-emerald-500/20 p-4 border border-emerald-500/20 rounded-xl transition-all">
-            <p className="font-black text-emerald-300 text-sm uppercase tracking-wider">Quero negociar agora</p>
-            <p className="mt-1 text-slate-300 text-sm">Abra a Calculadora com desconto por carta para fechar troca no balcão.</p>
+          <Link href="/calculadora" className="group bg-success/10 hover:bg-success/15 p-4 border border-success/20 rounded-xl transition-all">
+            <p className="font-black text-success text-sm uppercase tracking-wider">Quero negociar agora</p>
+            <p className="mt-1 text-muted-foreground text-sm">Abra a Calculadora com desconto por carta para fechar troca no balcão.</p>
           </Link>
-          <Link href="/deckbuilder" className="group bg-indigo-500/10 hover:bg-indigo-500/20 p-4 border border-indigo-500/20 rounded-xl transition-all">
-            <p className="font-black text-indigo-300 text-sm uppercase tracking-wider">Quero montar deck</p>
-            <p className="mt-1 text-slate-300 text-sm">Construa 50 + líder com validação de cópias para não errar na montagem.</p>
+          <Link href="/deckbuilder" className="group bg-secondary/10 hover:bg-secondary/15 p-4 border border-secondary/20 rounded-xl transition-all">
+            <p className="font-black text-secondary text-sm uppercase tracking-wider">Quero montar deck</p>
+            <p className="mt-1 text-muted-foreground text-sm">Construa 50 + líder com validação de cópias para não errar na montagem.</p>
           </Link>
-          <Link href="/radar" className="group bg-orange-500/10 hover:bg-orange-500/20 p-4 border border-orange-500/20 rounded-xl transition-all">
-            <p className="font-black text-orange-300 text-sm uppercase tracking-wider">Quero jogar hoje</p>
-            <p className="mt-1 text-slate-300 text-sm">Veja torneios locais e entre em contato direto com a loja via WhatsApp.</p>
+          <Link href="/radar" className="group bg-primary/10 hover:bg-primary/15 p-4 border border-primary/20 rounded-xl transition-all">
+            <p className="font-black text-primary text-sm uppercase tracking-wider">Quero jogar hoje</p>
+            <p className="mt-1 text-muted-foreground text-sm">Veja torneios locais e entre em contato direto com a loja via WhatsApp.</p>
           </Link>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-20"><div className="border-orange-500 border-t-2 rounded-full w-12 h-12 animate-spin"></div></div>
+          <div className="flex justify-center py-20"><div className="border-primary border-t-2 rounded-full w-12 h-12 animate-spin"></div></div>
         ) : (
           <>
             <div className="gap-4 md:gap-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
@@ -181,28 +181,28 @@ export default function Home() {
                 const isNegative = yieldPct < 0;
 
                 return (
-                  <Link href={`/carta/${card.id}`} key={card.id} className="group block bg-slate-900 p-3 border border-slate-800 hover:border-orange-500/50 rounded-xl transition-all cursor-pointer">
+                  <Link href={`/carta/${card.id}`} key={card.id} className="group block bg-surface p-3 border border-border hover:border-primary/50 rounded-xl transition-all cursor-pointer">
                     <div className="relative">
                       <img src={card.image_url} alt={card.name} className="shadow-md mb-3 rounded-lg w-full group-hover:scale-[1.02] transition-transform duration-300" />
                       {/* Badge de Raridade */}
-                      <div className="top-1 left-1 absolute bg-slate-950/90 backdrop-blur-sm px-2 py-0.5 border border-amber-400/20 rounded font-bold text-[10px] text-amber-400">
+                      <div className="top-1 left-1 absolute bg-background/90 backdrop-blur-sm px-2 py-0.5 border border-primary/20 rounded font-bold text-[10px] text-primary">
                         {card.rarity || 'UNK'}
                       </div>
                     </div>
 
-                    <p className="font-mono text-[10px] text-slate-500">{card.card_number}</p>
-                    <h2 className="font-bold text-slate-200 text-sm truncate" title={card.name}>{card.name}</h2>
+                    <p className="font-mono text-[10px] text-muted-foreground">{card.card_number}</p>
+                    <h2 className="font-bold text-foreground text-sm truncate" title={card.name}>{card.name}</h2>
 
                     <div className="flex justify-between items-end mt-3">
                       <div>
-                        <p className="mb-0.5 text-[10px] text-slate-400 uppercase tracking-wider">Preço Médio</p>
-                        <p className="font-black text-white text-lg">
+                        <p className="mb-0.5 text-[10px] text-muted-foreground uppercase tracking-wider">Preço Médio</p>
+                        <p className="font-black text-foreground text-lg">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentPrice)}
                         </p>
                       </div>
 
                       {/* Indicador de Yield (%) */}
-                      <div className={`flex items-center gap-1 text-[11px] font-bold px-1.5 py-1 rounded border ${isPositive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : isNegative ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                      <div className={`flex items-center gap-1 text-[11px] font-bold px-1.5 py-1 rounded border ${isPositive ? 'bg-success/10 text-success border-success/20' : isNegative ? 'bg-danger/10 text-danger border-danger/20' : 'bg-muted text-muted-foreground border-border'}`}>
                         {isPositive && <TrendingUp className="w-3 h-3" />}
                         {isNegative && <TrendingDown className="w-3 h-3" />}
                         {!isPositive && !isNegative && <Minus className="w-3 h-3" />}
@@ -214,12 +214,12 @@ export default function Home() {
               })}
             </div>
 
-            <div className="flex flex-col items-center gap-4 mt-12 pt-8 border-slate-800 border-t">
-              <p className="text-slate-500 text-sm">Mostrando {cards.length} de {totalCount} cartas</p>
+            <div className="flex flex-col items-center gap-4 mt-12 pt-8 border-border border-t">
+              <p className="text-muted-foreground text-sm">Mostrando {cards.length} de {totalCount} cartas</p>
               <div className="flex gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="bg-slate-800 hover:bg-slate-700 disabled:opacity-30 px-4 py-2 rounded-md transition-colors">Anterior</button>
-                <div className="flex items-center px-4 font-bold text-orange-500">Página {page} de {totalPages}</div>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="bg-slate-800 hover:bg-slate-700 disabled:opacity-30 px-4 py-2 rounded-md transition-colors">Próxima</button>
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="bg-surface hover:bg-accent disabled:opacity-30 px-4 py-2 rounded-md transition-colors">Anterior</button>
+                <div className="flex items-center px-4 font-bold text-primary">Página {page} de {totalPages}</div>
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="bg-surface hover:bg-accent disabled:opacity-30 px-4 py-2 rounded-md transition-colors">Próxima</button>
               </div>
             </div>
           </>

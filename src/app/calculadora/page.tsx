@@ -249,13 +249,13 @@ export default function Calculator() {
   const diferenca = Math.abs(totalA - totalB);
   
   let resultadoMsg = "Troca Justa!";
-  let resultadoCor = "text-slate-400";
+  let resultadoCor = "text-muted-foreground";
   if (totalA > totalB) {
     resultadoMsg = `Lado B volta R$ ${diferenca.toFixed(2)}`;
-    resultadoCor = "text-emerald-400";
+    resultadoCor = "text-success";
   } else if (totalB > totalA) {
     resultadoMsg = `Lado A volta R$ ${diferenca.toFixed(2)}`;
-    resultadoCor = "text-orange-500";
+    resultadoCor = "text-primary";
   }
 
   // Componente interno para não repetir código visual da linha da carta
@@ -264,38 +264,38 @@ export default function Calculator() {
     const moveLabel = side === 'A' ? 'Mover para Lado B' : 'Mover para Lado A';
     
     return (
-      <div className="flex sm:flex-row flex-col justify-between sm:items-center gap-3 bg-slate-950 p-3 border border-slate-800 rounded-lg">
+      <div className="flex sm:flex-row flex-col justify-between sm:items-center gap-3 bg-background p-3 border border-border rounded-lg">
         <div className="flex items-center gap-3 w-full min-w-0">
           <img src={card.image_url} alt={card.name} className="shadow-md rounded w-10 sm:w-12 h-14 sm:h-16 object-cover" />
           <div className="flex-1 min-w-0">
             <p className="pr-2 font-bold text-sm truncate" title={card.name}>{card.name}</p>
-            <p className="text-slate-500 text-xs line-through">R$ {card.price.toFixed(2)}</p>
-            <p className="font-bold text-emerald-400 text-lg">R$ {finalPrice.toFixed(2)}</p>
+            <p className="text-muted-foreground text-xs line-through">R$ {card.price.toFixed(2)}</p>
+            <p className="font-bold text-success text-lg">R$ {finalPrice.toFixed(2)}</p>
           </div>
           
           {/* Input de Desconto Granular com uso de polegar (Mobile-First) */}
           <div className="flex flex-col items-center mr-1 sm:mr-2 shrink-0">
-            <label className="flex items-center gap-1 mb-1 text-[10px] text-slate-400 uppercase tracking-widest">
+            <label className="flex items-center gap-1 mb-1 text-[10px] text-muted-foreground uppercase tracking-widest">
               Desc <Percent className="w-3 h-3" />
             </label>
             <input 
               type="number" 
               value={card.discount}
               onChange={(e) => updateDiscount(index, side, Number(e.target.value))}
-              className="bg-slate-900 p-1 border border-slate-700 focus:border-orange-500 rounded outline-none w-12 sm:w-14 font-bold text-amber-500 text-center"
+              className="bg-surface p-1 border border-border focus:border-primary rounded outline-none w-12 sm:w-14 font-bold text-primary text-center"
             />
           </div>
         </div>
         
-        <div className="flex justify-end sm:justify-start items-center gap-1 sm:ml-2 pt-2 sm:pt-0 border-slate-800 border-t sm:border-t-0 sm:border-l">
+        <div className="flex justify-end sm:justify-start items-center gap-1 sm:ml-2 pt-2 sm:pt-0 border-border border-t sm:border-t-0 sm:border-l">
           <button
             onClick={() => moveCardToOtherSide(index, side)}
             title={moveLabel}
-            className="p-2 text-slate-500 hover:text-indigo-400 transition-colors"
+            className="p-2 text-muted-foreground hover:text-secondary transition-colors"
           >
             <ArrowRightLeft className="w-5 h-5" />
           </button>
-          <button onClick={() => removeCard(index, side)} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
+          <button onClick={() => removeCard(index, side)} className="p-2 text-muted-foreground hover:text-danger transition-colors">
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
@@ -304,39 +304,39 @@ export default function Calculator() {
   };
 
   return (
-    <main className="bg-slate-950 p-4 md:p-8 min-h-screen text-slate-100">
+    <main className="bg-background p-4 md:p-8 min-h-screen text-foreground">
       <div className="mx-auto max-w-5xl">
         <header className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-3 mb-6">
-          <Link href="/" className="inline-flex items-center text-slate-400 hover:text-orange-500 transition-colors">
+          <Link href="/" className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors">
             <ArrowLeft className="mr-2 w-5 h-5" />
             Voltar
           </Link>
-          <h1 className="flex items-center gap-2 bg-clip-text bg-linear-to-r from-orange-500 to-amber-300 font-bold text-transparent text-xl md:text-2xl">
-            Calculadora de Feira <ArrowRightLeft className="w-5 h-5 text-orange-500" />
+          <h1 className="flex items-center gap-2 bg-clip-text bg-linear-to-r from-primary to-secondary font-bold text-transparent text-xl md:text-2xl">
+            Calculadora de Feira <ArrowRightLeft className="w-5 h-5 text-primary" />
           </h1>
         </header>
 
         {source && (
-          <div className="bg-emerald-500/10 mb-4 px-4 py-2 border border-emerald-500/20 rounded-lg text-emerald-300 text-xs">
+          <div className="bg-success/10 mb-4 px-4 py-2 border border-success/20 rounded-lg text-success text-xs">
             Carta recebida do fluxo: <span className="font-bold uppercase">{source}</span>
           </div>
         )}
 
         {/* Placar de Diferença (Sticky) */}
-        <div className="top-4 z-10 sticky bg-slate-900 shadow-2xl mb-6 p-4 border border-slate-800 rounded-xl text-center">
+        <div className="top-4 z-10 sticky bg-surface shadow-2xl shadow-black/10 mb-6 p-4 border border-border rounded-xl text-center">
           <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2">
-            <p className="text-slate-400 text-xs md:text-sm uppercase tracking-widest">Resultado Final</p>
+            <p className="text-muted-foreground text-xs md:text-sm uppercase tracking-widest">Resultado Final</p>
             <div className="flex justify-center sm:justify-end gap-2">
               <button
                 onClick={undoLastAction}
                 disabled={history.length === 0}
-                className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 px-3 py-1 rounded-md font-bold text-[10px] text-slate-300 uppercase tracking-wider transition-colors"
+                className="bg-background hover:bg-accent disabled:opacity-40 px-3 py-1 rounded-md font-bold text-[10px] text-muted-foreground uppercase tracking-wider transition-colors"
               >
                 Desfazer
               </button>
               <button
                 onClick={clearTrade}
-                className="bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-md font-bold text-[10px] text-slate-300 uppercase tracking-wider transition-colors"
+                className="bg-background hover:bg-accent px-3 py-1 rounded-md font-bold text-[10px] text-muted-foreground uppercase tracking-wider transition-colors"
               >
                 Limpar Troca
               </button>
@@ -349,7 +349,7 @@ export default function Calculator() {
           {actionLog.length > 0 && (
             <div className="flex flex-wrap justify-center gap-2 mt-3">
               {actionLog.slice(0, 4).map((action, idx) => (
-                <span key={`${action}-${idx}`} className="bg-slate-800 px-2 py-1 border border-slate-700 rounded-md text-[10px] text-slate-300">
+                <span key={`${action}-${idx}`} className="bg-muted px-2 py-1 border border-border rounded-md text-[10px] text-muted-foreground">
                   {action}
                 </span>
               ))}
@@ -358,18 +358,18 @@ export default function Calculator() {
         </div>
 
         {/* Barra de Busca Mobile-First */}
-        <div className="bg-slate-900 mb-6 p-4 border border-slate-800 rounded-xl">
+        <div className="bg-surface mb-6 p-4 border border-border rounded-xl">
           <div className="flex flex-col gap-4">
-            <div className="flex bg-slate-950 p-1 border border-slate-700 rounded-lg w-full">
+            <div className="flex bg-background p-1 border border-border rounded-lg w-full">
               <button 
                 onClick={() => setActiveSide('A')}
-                className={`flex-1 py-2 rounded-md font-bold text-sm transition-colors ${activeSide === 'A' ? 'bg-orange-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`flex-1 py-2 rounded-md font-bold text-sm transition-colors ${activeSide === 'A' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 Para Lado A
               </button>
               <button 
                 onClick={() => setActiveSide('B')}
-                className={`flex-1 py-2 rounded-md font-bold text-sm transition-colors ${activeSide === 'B' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`flex-1 py-2 rounded-md font-bold text-sm transition-colors ${activeSide === 'B' ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 Para Lado B
               </button>
@@ -381,10 +381,10 @@ export default function Calculator() {
                 placeholder="Buscar carta..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-slate-950 px-4 py-3 border border-slate-700 focus:border-orange-500 rounded-l-md outline-none w-full text-white"
+                className="bg-background px-4 py-3 border border-border focus:border-primary rounded-l-md outline-none w-full text-foreground"
               />
-              <button type="submit" className="flex justify-center items-center bg-slate-800 hover:bg-slate-700 px-6 border border-slate-700 border-l-0 rounded-r-md transition-colors">
-                {isSearching ? <div className="border-orange-500 border-t-2 rounded-full w-5 h-5 animate-spin"></div> : <Search className="w-5 h-5 text-orange-500" />}
+              <button type="submit" className="flex justify-center items-center bg-background hover:bg-accent px-6 border border-border border-l-0 rounded-r-md transition-colors">
+                {isSearching ? <div className="border-primary border-t-2 rounded-full w-5 h-5 animate-spin"></div> : <Search className="w-5 h-5 text-primary" />}
               </button>
             </form>
           </div>
@@ -393,15 +393,15 @@ export default function Calculator() {
           {searchResults.length > 0 && (
             <div className="flex flex-col gap-2 mt-4 pr-2 max-h-60 overflow-y-auto custom-scrollbar">
               {searchResults.map(card => (
-                <div key={card.id} className="flex justify-between items-center bg-slate-950 p-2 border border-slate-800 rounded-lg">
+                <div key={card.id} className="flex justify-between items-center bg-background p-2 border border-border rounded-lg">
                   <div className="flex items-center gap-3">
                     <img src={card.image_url} alt={card.name} className="rounded w-10 h-14 object-cover" />
                     <div>
                       <p className="max-w-45 font-bold text-sm truncate">{card.name}</p>
-                      <p className="text-slate-500 text-xs">R$ {card.price.toFixed(2)} (Ref)</p>
+                      <p className="text-muted-foreground text-xs">R$ {card.price.toFixed(2)} (Ref)</p>
                     </div>
                   </div>
-                  <button onClick={() => addCard(card)} className="bg-emerald-600/20 hover:bg-emerald-600 p-3 rounded-md text-emerald-500 hover:text-white transition-colors">
+                  <button onClick={() => addCard(card)} className="bg-success/20 hover:bg-success p-3 rounded-md text-success hover:text-success-foreground transition-colors">
                     <Plus className="w-6 h-6" />
                   </button>
                 </div>
@@ -412,30 +412,30 @@ export default function Calculator() {
 
         {/* Colunas da Troca */}
         <div className="gap-6 grid grid-cols-1 md:grid-cols-2">
-          <div className="flex flex-col bg-slate-900 p-4 border border-slate-800 rounded-xl h-full">
-            <div className="flex justify-between items-center mb-4 pb-4 border-slate-800 border-b">
-              <h2 className="font-bold text-orange-500 text-lg">Lado A</h2>
-              <span className="font-black text-white text-xl">R$ {totalA.toFixed(2)}</span>
+          <div className="flex flex-col bg-surface p-4 border border-border rounded-xl h-full">
+            <div className="flex justify-between items-center mb-4 pb-4 border-border border-b">
+              <h2 className="font-bold text-primary text-lg">Lado A</h2>
+              <span className="font-black text-foreground text-xl">R$ {totalA.toFixed(2)}</span>
             </div>
             <div className="flex-1 space-y-3">
-              {leftCards.length === 0 ? <p className="py-6 text-slate-500 text-sm text-center">Vazio</p> : leftCards.map((card, idx) => <CardRow key={idx} card={card} index={idx} side="A" />)}
+              {leftCards.length === 0 ? <p className="py-6 text-muted-foreground text-sm text-center">Vazio</p> : leftCards.map((card, idx) => <CardRow key={idx} card={card} index={idx} side="A" />)}
             </div>
           </div>
 
-          <div className="flex flex-col bg-slate-900 p-4 border border-slate-800 rounded-xl h-full">
-            <div className="flex justify-between items-center mb-4 pb-4 border-slate-800 border-b">
-              <h2 className="font-bold text-indigo-400 text-lg">Lado B</h2>
-              <span className="font-black text-white text-xl">R$ {totalB.toFixed(2)}</span>
+          <div className="flex flex-col bg-surface p-4 border border-border rounded-xl h-full">
+            <div className="flex justify-between items-center mb-4 pb-4 border-border border-b">
+              <h2 className="font-bold text-secondary text-lg">Lado B</h2>
+              <span className="font-black text-foreground text-xl">R$ {totalB.toFixed(2)}</span>
             </div>
             <div className="flex-1 space-y-3">
-              {rightCards.length === 0 ? <p className="py-6 text-slate-500 text-sm text-center">Vazio</p> : rightCards.map((card, idx) => <CardRow key={idx} card={card} index={idx} side="B" />)}
+              {rightCards.length === 0 ? <p className="py-6 text-muted-foreground text-sm text-center">Vazio</p> : rightCards.map((card, idx) => <CardRow key={idx} card={card} index={idx} side="B" />)}
             </div>
           </div>
         </div>
       </div>
 
       {undoToast && (
-        <div className="right-4 bottom-4 z-20 fixed bg-emerald-500/15 px-3 py-2 border border-emerald-500/30 rounded-lg text-emerald-300 text-xs">
+        <div className="right-4 bottom-4 z-20 fixed bg-success/15 px-3 py-2 border border-success/30 rounded-lg text-success text-xs">
           Acao desfeita
         </div>
       )}

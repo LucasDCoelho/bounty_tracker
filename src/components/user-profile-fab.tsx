@@ -24,7 +24,7 @@ export default function UserProfileFab() {
       href={href}
       aria-label={label}
       title={label}
-      className="top-4 right-4 z-50 fixed flex justify-center items-center bg-slate-900/95 hover:bg-slate-800 shadow-xl backdrop-blur-sm border border-slate-700 rounded-full w-11 h-11 text-slate-100 transition-all"
+      className="top-4 right-4 z-50 fixed flex justify-center items-center bg-surface/95 hover:bg-accent shadow-black/10 shadow-xl backdrop-blur-sm border border-border rounded-full w-11 h-11 text-surface-foreground transition-all"
     >
       {avatarUrl ? (
         <img
@@ -37,7 +37,7 @@ export default function UserProfileFab() {
       ) : (
         <User className="w-5 h-5" />
       )}
-      <span className={`right-0 bottom-0 absolute border-2 border-slate-900 rounded-full w-3 h-3 ${user ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+      <span className={`right-0 bottom-0 absolute border-2 border-background rounded-full w-3 h-3 ${user ? 'bg-success' : 'bg-muted'}`} />
     </Link>
   );
 }
