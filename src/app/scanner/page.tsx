@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { enqueueTradeCard } from '@/lib/flow-bridge';
-import { createWorker } from 'tesseract.js';
 import { ArrowLeft, Zap, Target, Loader2, Camera, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation'; // <-- Importação corrigida aqui
 
@@ -82,37 +81,45 @@ export default function CardScanner() {
       canvas.height = video.videoHeight;
       context?.drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      const imageData = canvas.toDataURL('image/png');
+      // DICA DE PERFORMANCE: Use 'image/jpeg' e qualidade 0.8 para reduzir 
+      // brutalmente o tamanho do payload enviado para sua API.
+      const imageData = canvas.toDataURL('image/jpeg', 0.8);
 
-      const worker = await createWorker('eng');
-      const { data: { text } } = await worker.recognize(imageData);
-      await worker.terminate();
+      // Envia a imagem para nossa rota Next.js
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageData }),
+      });
 
-      // Regex para encontrar o código da carta (ex: OP01-120)
-      const opCodeRegex = /[A-Z]{2}\d{2}-\d{3}/g;
-      const matches = text.toUpperCase().match(opCodeRegex);
+      const result = await response.json();
 
-      if (matches && matches.length > 0) {
-        const cardNumber = matches[0];
+      if (response.ok && result.code) {
+        const cardNumber = result.code;
         setLastScannedNumber(cardNumber);
         
+        // Mantém a sua lógica de buscar no Supabase
         const { data } = await supabase
           .from('cards')
           .select('id, name, image_url, price_history(price_avg)')
           .eq('card_number', cardNumber)
           .single();
 
-        if (data) setFoundCard(data);
+        if (data) {
+            setFoundCard(data);
+        } else {
+            alert(`Código ${cardNumber} encontrado, mas não está no banco de dados.`);
+        }
       } else {
-        alert("Código não detectado. Tente focar melhor no código (ex: OP01-001).");
+        alert("Código não detectado. " + (result.error || "Tente novamente."));
       }
     } catch (err) {
       console.error("Erro no Scanner:", err);
+      alert("Erro ao conectar com o servidor de escaneamento.");
     } finally {
       setIsProcessing(false);
     }
   };
-
   return (
     <main className="bg-background p-4 md:p-8 min-h-screen text-foreground">
       <div className="mx-auto max-w-4xl">
