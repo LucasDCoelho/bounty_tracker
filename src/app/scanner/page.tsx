@@ -25,8 +25,8 @@ type ScanApiResult = {
   error?: string;
 };
 
-const SIGNATURE_SIZE = 28;
-const MIN_VISUAL_CONFIDENCE = 0.64;
+const SIGNATURE_SIZE = 32;
+const MIN_VISUAL_CONFIDENCE = 0.58;
 const CARD_ASPECT_RATIO = 63 / 88;
 
 function normalizeCodes(result: ScanApiResult) {
@@ -68,11 +68,15 @@ function captureCardCrop(video: HTMLVideoElement) {
     throw new Error('Vídeo ainda não está pronto para captura.');
   }
 
-  let cropWidth = sourceWidth;
+  // Calibragem: O usuário tenta encaixar no alvo central da tela, que tem um padding.
+  // Pegamos ~80% da tela para evitar processar os dedos ou a mesa ao redor.
+  const safeAreaFactor = 0.8;
+  
+  let cropWidth = sourceWidth * safeAreaFactor;
   let cropHeight = Math.round(cropWidth / CARD_ASPECT_RATIO);
 
-  if (cropHeight > sourceHeight) {
-    cropHeight = sourceHeight;
+  if (cropHeight > sourceHeight * safeAreaFactor) {
+    cropHeight = sourceHeight * safeAreaFactor;
     cropWidth = Math.round(cropHeight * CARD_ASPECT_RATIO);
   }
 
