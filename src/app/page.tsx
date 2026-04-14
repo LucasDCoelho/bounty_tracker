@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/telemetry';
 import { ArrowRightLeft, TrendingUp, TrendingDown, Minus, Layers, Wallet, Store, Calendar, Zap } from 'lucide-react';
 
 type Card = {
@@ -64,11 +65,28 @@ export default function Home() {
   };
 
   useEffect(() => { fetchSets(); }, []);
-  useEffect(() => { fetchMarketData(); }, [page, selectedSet]);
+  useEffect(() => {
+    trackEvent({
+      eventName: 'market_view',
+      properties: {
+        page,
+        selectedSet: selectedSet || 'all',
+      },
+    });
+
+    fetchMarketData();
+  }, [page, selectedSet]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
+    trackEvent({
+      eventName: 'market_search',
+      properties: {
+        query: searchTerm || '',
+        selectedSet: selectedSet || 'all',
+      },
+    });
     fetchMarketData(1);
   };
 
@@ -112,11 +130,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex md:flex-row flex-col gap-3 w-full md:w-auto">
+          <div className="flex md:flex-row flex-col gap-3 w-full md:max-w-xl">
             <select
               value={selectedSet}
               onChange={(e) => { setSelectedSet(e.target.value); setPage(1); }}
-              className="bg-background px-4 py-2 border border-border focus:border-primary rounded-md outline-none text-foreground"
+              className="bg-background px-4 py-2 border border-border focus:border-primary rounded-md outline-none w-full md:w-auto md:min-w-55 text-foreground"
             >
               <option value="">Todas as Coleções</option>
               {sets.map(s => (
@@ -124,15 +142,15 @@ export default function Home() {
               ))}
             </select>
 
-            <form onSubmit={handleSearchSubmit} className="flex">
+            <form onSubmit={handleSearchSubmit} className="flex flex-1 min-w-0">
               <input
                 type="text"
                 placeholder="Buscar por nome..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-background px-4 py-2 border border-border focus:border-primary rounded-l-md outline-none w-full text-foreground"
+                className="bg-background px-4 py-2 border border-border focus:border-primary rounded-l-md outline-none w-full min-w-0 text-foreground"
               />
-              <button type="submit" className="bg-primary hover:bg-primary/90 px-4 py-2 rounded-r-md font-bold text-primary-foreground transition-colors">
+              <button type="submit" className="bg-primary hover:bg-primary/90 px-4 py-2 rounded-r-md font-bold text-primary-foreground whitespace-nowrap transition-colors">
                 Buscar
               </button>
             </form>
@@ -195,7 +213,7 @@ export default function Home() {
 
                     <div className="flex justify-between items-end mt-3">
                       <div>
-                        <p className="mb-0.5 text-[10px] text-muted-foreground uppercase tracking-wider">Preço Médio</p>
+                        <p className="mb-0.5 text-[10px] text-muted-foreground uppercase tracking-wider">Preço (Liga)</p>
                         <p className="font-black text-foreground text-lg">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentPrice)}
                         </p>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/telemetry';
 import { ArrowLeft, Calendar, MapPin, Users, Ticket, MessageCircle, Clock } from 'lucide-react';
 
 type Tournament = {
@@ -36,6 +37,12 @@ export default function TournamentRadar() {
   };
 
   useEffect(() => { fetchEvents(); }, []);
+
+  useEffect(() => {
+    trackEvent({
+      eventName: 'radar_view',
+    });
+  }, []);
 
   return (
     <main className="bg-background p-4 md:p-8 min-h-screen text-foreground">

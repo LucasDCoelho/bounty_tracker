@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { clearTradeSession, consumeTradeQueue, loadTradeSession, saveTradeSession } from '@/lib/flow-bridge';
+import { trackEvent } from '@/lib/telemetry';
 import { ArrowLeft, Plus, Trash2, Search, ArrowRightLeft, Percent } from 'lucide-react';
 
 // Adicionamos o campo de desconto (discount) no modelo da carta
@@ -75,6 +76,12 @@ export default function Calculator() {
 
   useEffect(() => {
     setSource(new URLSearchParams(window.location.search).get('source'));
+    trackEvent({
+      eventName: 'trade_calculator_view',
+      properties: {
+        source: new URLSearchParams(window.location.search).get('source') || 'direct',
+      },
+    });
 
     const savedSession = loadTradeSession();
     if (savedSession) {
@@ -153,6 +160,14 @@ export default function Calculator() {
 
   const addCard = (card: Card) => {
     pushHistory(`Adicionou ${card.name}`);
+    trackEvent({
+      eventName: 'trade_card_added',
+      properties: {
+        cardId: card.id,
+        cardName: card.name,
+        side: activeSide,
+      },
+    });
     addCardToSide(card, activeSide);
     
     setSearchResults([]);
@@ -164,6 +179,14 @@ export default function Calculator() {
     if (!selectedCard) return;
 
     pushHistory(`Removeu ${selectedCard.name}`);
+    trackEvent({
+      eventName: 'trade_card_removed',
+      properties: {
+        cardId: selectedCard.id,
+        cardName: selectedCard.name,
+        side,
+      },
+    });
 
     if (side === 'A') {
       const newCards = [...leftCards];
@@ -181,6 +204,15 @@ export default function Calculator() {
       const card = leftCards[index];
       if (!card) return;
       pushHistory(`Moveu ${card.name} para Lado B`);
+      trackEvent({
+        eventName: 'trade_card_moved',
+        properties: {
+          cardId: card.id,
+          cardName: card.name,
+          from: 'A',
+          to: 'B',
+        },
+      });
       setLeftCards((prev) => prev.filter((_, i) => i !== index));
       setRightCards((prev) => [...prev, card]);
       setActiveSide('B');
@@ -190,6 +222,15 @@ export default function Calculator() {
     const card = rightCards[index];
     if (!card) return;
     pushHistory(`Moveu ${card.name} para Lado A`);
+    trackEvent({
+      eventName: 'trade_card_moved',
+      properties: {
+        cardId: card.id,
+        cardName: card.name,
+        from: 'B',
+        to: 'A',
+      },
+    });
     setRightCards((prev) => prev.filter((_, i) => i !== index));
     setLeftCards((prev) => [...prev, card]);
     setActiveSide('A');
@@ -200,6 +241,13 @@ export default function Calculator() {
     if (!hasState) return;
 
     pushHistory('Limpou a troca');
+    trackEvent({
+      eventName: 'trade_cleared',
+      properties: {
+        leftCount: leftCards.length,
+        rightCount: rightCards.length,
+      },
+    });
     setLeftCards([]);
     setRightCards([]);
     setSearchResults([]);
@@ -215,6 +263,15 @@ export default function Calculator() {
     if (selectedCard.discount === newDiscount) return;
 
     pushHistory(`Ajustou desconto de ${selectedCard.name}`);
+    trackEvent({
+      eventName: 'trade_discount_changed',
+      properties: {
+        cardId: selectedCard.id,
+        cardName: selectedCard.name,
+        side,
+        newDiscount,
+      },
+    });
 
     if (side === 'A') {
       const newCards = [...leftCards];
@@ -234,6 +291,12 @@ export default function Calculator() {
     setLeftCards(lastSnapshot.leftCards);
     setRightCards(lastSnapshot.rightCards);
     setActiveSide(lastSnapshot.activeSide);
+    trackEvent({
+      eventName: 'trade_undo',
+      properties: {
+        historyDepth: history.length,
+      },
+    });
     setHistory((prev) => prev.slice(0, -1));
     setUndoToast(true);
     setActionLog((prev) => ['Desfez a última ação', ...prev].slice(0, 8));

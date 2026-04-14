@@ -24,7 +24,8 @@ CREATE TABLE public.deck_cards (
   card_id uuid NOT NULL,
   quantity integer DEFAULT 1 CHECK (quantity > 0),
   CONSTRAINT deck_cards_pkey PRIMARY KEY (deck_id, card_id),
-  CONSTRAINT deck_cards_deck_id_fkey FOREIGN KEY (deck_id) REFERENCES public.decks(id)
+  CONSTRAINT deck_cards_deck_id_fkey FOREIGN KEY (deck_id) REFERENCES public.decks(id),
+  CONSTRAINT deck_cards_card_id_fkey FOREIGN KEY (card_id) REFERENCES public.cards(id)
 );
 CREATE TABLE public.decks (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -58,6 +59,17 @@ CREATE TABLE public.price_history (
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT price_history_pkey PRIMARY KEY (id),
   CONSTRAINT price_history_card_id_fkey FOREIGN KEY (card_id) REFERENCES public.cards(id)
+);
+CREATE TABLE public.public_profiles (
+  user_id uuid NOT NULL,
+  display_name text NOT NULL,
+  handle text UNIQUE,
+  avatar_url text,
+  is_public boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT public_profiles_pkey PRIMARY KEY (user_id),
+  CONSTRAINT public_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.sets (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

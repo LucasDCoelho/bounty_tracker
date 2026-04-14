@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { enqueueTradeCard } from '@/lib/flow-bridge';
+import { trackEvent } from '@/lib/telemetry';
 import { ArrowLeft, Zap, Target, Loader2, Camera, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation'; // <-- Importação corrigida aqui
 
@@ -19,21 +20,14 @@ type ScanApiResult = {
   code?: string | null;
   codes?: string[];
   nameHints?: string[];
+  variants?: string[];
   fullText?: string;
   error?: string;
 };
 
-const SIGNATURE_SIZE = 24;
-const MIN_VISUAL_CONFIDENCE = 0.72;
-
-function dedupeCards(cards: CardResult[]) {
-  const seen = new Set<string>();
-  return cards.filter((card) => {
-    if (seen.has(card.id)) return false;
-    seen.add(card.id);
-    return true;
-  });
-}
+const SIGNATURE_SIZE = 28;
+const MIN_VISUAL_CONFIDENCE = 0.64;
+const CARD_ASPECT_RATIO = 63 / 88;
 
 function normalizeCodes(result: ScanApiResult) {
   const codes = Array.isArray(result.codes) ? result.codes : [];
@@ -56,6 +50,120 @@ function getNameHints(result: ScanApiResult) {
     .map((hint) => String(hint || '').trim())
     .filter((hint) => hint.length >= 3)
     .slice(0, 3);
+}
+
+function getVariantHints(result: ScanApiResult) {
+  if (!Array.isArray(result.variants)) return [];
+  return result.variants
+    .map((hint) => String(hint || '').trim().toUpperCase())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function captureCardCrop(video: HTMLVideoElement) {
+  const sourceWidth = video.videoWidth;
+  const sourceHeight = video.videoHeight;
+
+  if (!sourceWidth || !sourceHeight) {
+    throw new Error('Vídeo ainda não está pronto para captura.');
+  }
+
+  let cropWidth = sourceWidth;
+  let cropHeight = Math.round(cropWidth / CARD_ASPECT_RATIO);
+
+  if (cropHeight > sourceHeight) {
+    cropHeight = sourceHeight;
+    cropWidth = Math.round(cropHeight * CARD_ASPECT_RATIO);
+  }
+
+  const cropX = Math.max(0, Math.floor((sourceWidth - cropWidth) / 2));
+  const cropY = Math.max(0, Math.floor((sourceHeight - cropHeight) / 2));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cropWidth;
+  canvas.height = cropHeight;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Canvas indisponível para captura.');
+  }
+
+  context.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+function scoreTextMatch(card: CardResult, hints: string[], variants: string[], codes: string[]) {
+  const normalizedName = card.name.toUpperCase();
+  const normalizedNumber = String(card.card_number || '').toUpperCase();
+
+  let score = 0;
+
+  for (const hint of hints) {
+    const normalizedHint = hint.toUpperCase();
+    if (!normalizedHint) continue;
+
+    if (normalizedName === normalizedHint) {
+      score += 6;
+      continue;
+    }
+
+    if (normalizedName.includes(normalizedHint)) {
+      score += 3;
+    }
+
+    if (normalizedHint.length >= 4) {
+      const tokens = normalizedHint.split(/\s+/).filter(Boolean);
+      const tokenHits = tokens.filter((token) => normalizedName.includes(token)).length;
+      score += tokenHits * 0.75;
+    }
+  }
+
+  for (const variant of variants) {
+    if (normalizedName.includes(variant)) {
+      score += 2.5;
+    }
+  }
+
+  if (codes.some((code) => code === normalizedNumber)) {
+    score += 4;
+  }
+
+  return score;
+}
+
+async function loadCandidatePool(codes: string[], hints: string[], variants: string[]) {
+  const candidateMap = new Map<string, CardResult>();
+
+  if (codes.length > 0) {
+    const { data: codeCards } = await supabase
+      .from('cards')
+      .select('id, name, card_number, image_url, price_history(price_avg)')
+      .in('card_number', codes)
+      .limit(12);
+
+    for (const card of (codeCards ?? []) as CardResult[]) {
+      candidateMap.set(card.id, card);
+    }
+  }
+
+  const searchTerms = Array.from(new Set([...hints, ...variants])).slice(0, 5);
+
+  for (const term of searchTerms) {
+    const normalizedTerm = term.trim();
+    if (!normalizedTerm) continue;
+
+    const { data: nameCards } = await supabase
+      .from('cards')
+      .select('id, name, card_number, image_url, price_history(price_avg)')
+      .ilike('name', `%${normalizedTerm}%`)
+      .limit(8);
+
+    for (const card of (nameCards ?? []) as CardResult[]) {
+      candidateMap.set(card.id, card);
+    }
+  }
+
+  return Array.from(candidateMap.values());
 }
 
 function loadImage(src: string) {
@@ -145,6 +253,15 @@ export default function CardScanner() {
   const handleLaunchToCalculator = () => {
     if (!foundCard) return;
 
+    trackEvent({
+      eventName: 'scanner_launch_to_calculator',
+      properties: {
+        cardId: foundCard.id,
+        cardName: foundCard.name,
+        cardNumber: foundCard.card_number,
+      },
+    });
+
     enqueueTradeCard({
       id: foundCard.id,
       name: foundCard.name,
@@ -182,6 +299,12 @@ export default function CardScanner() {
   };
 
   useEffect(() => {
+    trackEvent({
+      eventName: 'scanner_view',
+    });
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -194,101 +317,107 @@ export default function CardScanner() {
 
     setIsProcessing(true);
     setFoundCard(null);
-    setVisualConfidence(null);
-
-    const fetchCardsByCodes = async (codes: string[]) => {
-      if (!codes.length) return [] as CardResult[];
-
-      const { data, error } = await supabase
-        .from('cards')
-        .select('id, name, card_number, image_url, price_history(price_avg)')
-        .in('card_number', codes)
-        .limit(20);
-
-      if (error || !data) return [];
-      return data as CardResult[];
-    };
-
-    const fetchCardsByNameHints = async (nameHints: string[]) => {
-      for (const hint of nameHints) {
-        const { data, error } = await supabase
-          .from('cards')
-          .select('id, name, card_number, image_url, price_history(price_avg)')
-          .ilike('name', `%${hint}%`)
-          .limit(25);
-
-        if (!error && data && data.length > 0) {
-          return data as CardResult[];
-        }
-      }
-
-      return [] as CardResult[];
-    };
 
     try {
       const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
+      const imageData = captureCardCrop(video);
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // DICA DE PERFORMANCE: Use 'image/jpeg' e qualidade 0.8 para reduzir 
-      // brutalmente o tamanho do payload enviado para sua API.
-      const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
-      // Envia a imagem para nossa rota Next.js
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: imageData }),
       });
 
-      const result = (await response.json()) as ScanApiResult;
+      const result = await response.json();
+      
+      // 🕵️‍♂️ DEBUG IMPORTANTE: Abra o console do navegador e veja a mágica do Lens!
+      console.log("Visão do Google:", result);
 
       if (!response.ok) {
-        alert("Não foi possível ler a carta. " + (result.error || "Tente novamente."));
+        trackEvent({
+          eventName: 'scanner_failure',
+          properties: {
+            reason: result.error || 'scan_api_error',
+          },
+        });
+        alert("Erro na leitura. " + (result.error || "Tente novamente."));
+        setIsProcessing(false);
         return;
       }
 
-      const detectedCodes = normalizeCodes(result);
+      const codes = normalizeCodes(result);
       const nameHints = getNameHints(result);
+      const variants = getVariantHints(result);
 
-      const [cardsByCode, cardsByName] = await Promise.all([
-        fetchCardsByCodes(detectedCodes),
-        fetchCardsByNameHints(nameHints),
-      ]);
+      const candidatePool = await loadCandidatePool(codes, nameHints, variants);
+      const visualMatch = candidatePool.length > 0
+        ? await findBestVisualMatch(imageData, candidatePool)
+        : null;
 
-      const candidates = dedupeCards([...cardsByCode, ...cardsByName]);
+      const textFallback = candidatePool
+        .slice()
+        .sort((a, b) => scoreTextMatch(b, nameHints, variants, codes) - scoreTextMatch(a, nameHints, variants, codes))[0] || null;
 
-      if (!candidates.length) {
-        alert('Texto detectado, mas não achei carta correspondente no banco.');
-        return;
+      let matchedCard: CardResult | null = null;
+      let matchedBy: 'visual' | 'code' | 'text' | null = null;
+
+      if (visualMatch && visualMatch.score >= MIN_VISUAL_CONFIDENCE) {
+        matchedCard = visualMatch.card;
+        matchedBy = 'visual';
+        setVisualConfidence(visualMatch.score);
+      } else {
+        const exactCode = codes[0] || null;
+        if (exactCode) {
+          const exactMatch = candidatePool.find((card) => String(card.card_number || '').toUpperCase() === exactCode);
+          if (exactMatch) {
+            matchedCard = exactMatch;
+            matchedBy = 'code';
+          }
+        }
+
+        if (!matchedCard && textFallback) {
+          matchedCard = textFallback;
+          matchedBy = 'text';
+        }
+
+        if (visualMatch) {
+          setVisualConfidence(visualMatch.score);
+        }
       }
 
-      const bestVisual = await findBestVisualMatch(imageData, candidates);
+      if (matchedCard) {
+        setFoundCard(matchedCard);
+        setLastScannedNumber(result.code || matchedCard.card_number);
 
-      if (!bestVisual) {
-        alert('Não consegui comparar a imagem capturada com as cartas do banco.');
-        return;
+        trackEvent({
+          eventName: 'scanner_success',
+          properties: {
+            cardId: matchedCard.id,
+            cardName: matchedCard.name,
+            cardNumber: matchedCard.card_number,
+            matchedBy,
+            visualConfidence: visualMatch?.score ?? null,
+            candidateCount: candidatePool.length,
+          },
+        });
+      } else {
+        setVisualConfidence(visualMatch?.score ?? null);
+        trackEvent({
+          eventName: 'scanner_no_match',
+          properties: {
+            scannedNumber: lastScannedNumber || null,
+            candidateCount: candidatePool.length,
+          },
+        });
       }
-
-      const fallbackCode = detectedCodes[0] || bestVisual.card.card_number;
-
-      if (bestVisual.score < MIN_VISUAL_CONFIDENCE && cardsByCode.length > 0) {
-        const firstCodeMatch = cardsByCode[0];
-        setFoundCard(firstCodeMatch);
-        setLastScannedNumber(firstCodeMatch.card_number || fallbackCode);
-        setVisualConfidence(bestVisual.score);
-        return;
-      }
-
-      setFoundCard(bestVisual.card);
-      setLastScannedNumber(bestVisual.card.card_number || fallbackCode);
-      setVisualConfidence(bestVisual.score);
     } catch (err) {
       console.error("Erro no Scanner:", err);
+      trackEvent({
+        eventName: 'scanner_failure',
+        properties: {
+          reason: 'client_exception',
+        },
+      });
       alert("Erro ao conectar com o servidor de escaneamento.");
     } finally {
       setIsProcessing(false);

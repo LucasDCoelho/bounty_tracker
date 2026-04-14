@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { enqueueTradeCard, savePendingDeckCard } from '@/lib/flow-bridge';
+import { trackEvent } from '@/lib/telemetry';
 import { HolographicCard } from '@/components/holographic-card';
 import {
     ComposedChart,
@@ -105,6 +106,14 @@ export default function CardDetails() {
                     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 );
                 setCard(data);
+                trackEvent({
+                    eventName: 'card_view',
+                    properties: {
+                        cardId,
+                        cardName: data.name,
+                        rarity: data.rarity,
+                    },
+                });
             }
             setIsLoading(false);
         }
@@ -116,9 +125,12 @@ export default function CardDetails() {
     const [targetPrice, setTargetPrice] = useState("");
 
     const createAlert = async () => {
+        if (!card) return;
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return router.push('/login');
 
+        const currentPrice = card.price_history[card.price_history.length - 1]?.price_avg || 0;
         const parsedTarget = Number(targetPrice);
         if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
             alert('Informe um preço-alvo válido maior que zero.');
@@ -130,15 +142,35 @@ export default function CardDetails() {
                 user_id: user.id,
                 card_id: cardId,
                 target_price: parsedTarget,
-                current_price_at_creation: precoAtual
+                current_price_at_creation: currentPrice,
+                telegram_chat_id: user.user_metadata?.telegram_chat_id || null,
             }
         ]);
 
-        if (!error) alert("Bounty definido! Te avisaremos no Telegram.");
+        if (!error) {
+            trackEvent({
+                eventName: 'alert_created',
+                properties: {
+                    cardId,
+                    cardName: card.name,
+                    targetPrice: parsedTarget,
+                },
+            });
+            alert("Bounty definido! Te avisaremos no Telegram.");
+        }
     };
 
     const sendToCalculator = () => {
         if (!card) return;
+
+        trackEvent({
+            eventName: 'send_to_calculator',
+            properties: {
+                cardId: card.id,
+                cardName: card.name,
+                source: 'card_detail',
+            },
+        });
 
         enqueueTradeCard({
             id: card.id,
@@ -156,6 +188,15 @@ export default function CardDetails() {
     const sendToDeckbuilder = () => {
         if (!card) return;
 
+        trackEvent({
+            eventName: 'send_to_deckbuilder',
+            properties: {
+                cardId: card.id,
+                cardName: card.name,
+                source: 'card_detail',
+            },
+        });
+
         savePendingDeckCard({
             id: card.id,
             name: card.name,
@@ -170,6 +211,8 @@ export default function CardDetails() {
 
     // FUNÇÃO NOVA: Adiciona à Carteira
     const addToCollection = async () => {
+        if (!card) return;
+
         setIsAdding(true);
 
         // 1. Pega a sessão atual
@@ -193,6 +236,13 @@ export default function CardDetails() {
             ]);
 
         if (!error) {
+            trackEvent({
+                eventName: 'collection_add',
+                properties: {
+                    cardId,
+                    cardName: card.name,
+                },
+            });
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
         } else {
@@ -213,19 +263,44 @@ export default function CardDetails() {
         ? 'Informe um preço-alvo válido maior que zero.'
         : '';
 
-    // Transformar o histórico de preços para o formato de Trading (Candlestick)
-    const chartData = card.price_history.map((ph: any, index: number) => {
-        // O preço de abertura é o preço médio do dia anterior (ou o atual, se for o primeiro dia)
-        const prevPrice = card.price_history[index - 1]?.price_avg || ph.price_avg;
-        return {
-            date: new Date(ph.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-            open: prevPrice,
-            close: ph.price_avg,
-            low: ph.price_min,
-            high: ph.price_max,
-            displayPrice: [prevPrice, ph.price_avg] // O Recharts precisa de um array para a altura da barra
-        };
-    });
+    // Agrupa por dia para evitar múltiplas velas no mesmo rótulo de data.
+    const groupedHistory = card.price_history.reduce((acc, ph: any) => {
+        const date = new Date(ph.created_at);
+        const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+        if (!acc[dayKey]) {
+            acc[dayKey] = [];
+        }
+
+        acc[dayKey].push(ph);
+        return acc;
+    }, {} as Record<string, CardDetail['price_history']>);
+
+    // Cada vela representa 1 dia: open = primeiro preço do dia, close = último,
+    // high/low = extremos do dia.
+    const chartData = Object.entries(groupedHistory)
+        .sort(([dayA], [dayB]) => new Date(dayA).getTime() - new Date(dayB).getTime())
+        .map(([dayKey, items]) => {
+            const sortedItems = [...items].sort(
+                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+            const first = sortedItems[0];
+            const last = sortedItems[sortedItems.length - 1];
+
+            const open = first?.price_avg ?? 0;
+            const close = last?.price_avg ?? open;
+            const high = Math.max(...sortedItems.map((item) => item.price_max));
+            const low = Math.min(...sortedItems.map((item) => item.price_min));
+
+            return {
+                date: new Date(dayKey).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+                open,
+                close,
+                low,
+                high,
+                displayPrice: [open, close]
+            };
+        });
 
     return (
         <main className="bg-background p-4 md:p-8 min-h-screen text-foreground">
@@ -281,13 +356,16 @@ export default function CardDetails() {
 
                         <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
                             <div className="bg-surface p-6 border border-border rounded-2xl">
-                                <p className="mb-1 text-muted-foreground text-xs uppercase tracking-wider">Preço Médio</p>
+                                <p className="mb-1 text-muted-foreground text-xs uppercase tracking-wider">Preço Médio (Base Liga)</p>
                                 <p className="font-black text-success text-3xl">
                                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(precoAtual)}
                                 </p>
+                                <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+                                    Valor de referência calculado com base na liga.
+                                </p>
                                 <div className="bg-background mt-4 p-4 border border-border rounded-xl">
                                     <label className="block mb-2 font-bold text-[10px] text-muted-foreground uppercase">Definir Bounty (Preço Alvo)</label>
-                                    <div className="flex gap-2">
+                                    <div className="flex sm:flex-row flex-col gap-2">
                                         <input
                                             type="number"
                                             placeholder="R$ 0,00"
@@ -295,12 +373,12 @@ export default function CardDetails() {
                                             onChange={(e) => setTargetPrice(e.target.value)}
                                             min="0.01"
                                             step="0.01"
-                                            className="flex-1 bg-background px-3 py-2 border border-border focus:border-primary rounded-lg outline-none text-foreground text-sm"
+                                            className="flex-1 bg-background px-3 py-2 border border-border focus:border-primary rounded-lg outline-none w-full text-foreground text-sm"
                                         />
                                         <button
                                             onClick={createAlert}
                                             disabled={!isTargetPriceValid}
-                                            className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:hover:bg-muted px-4 py-2 rounded-lg font-bold text-primary-foreground text-sm transition-all disabled:cursor-not-allowed"
+                                            className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:hover:bg-muted px-4 py-2 rounded-lg w-full sm:w-auto font-bold text-primary-foreground text-sm whitespace-nowrap transition-all disabled:cursor-not-allowed"
                                         >
                                             Ativar Alerta
                                         </button>
@@ -332,8 +410,10 @@ export default function CardDetails() {
                         <div className="bg-surface shadow-2xl shadow-black/10 p-6 border border-border rounded-3xl">
                             <div className="flex justify-between items-center mb-8">
                                 <div>
-                                    <h3 className="font-bold text-foreground text-xl">Análise de Volatilidade</h3>
-                                    <p className="mt-1 text-muted-foreground text-xs uppercase tracking-widest">Candlestick (Diário)</p>
+                                    <h3 className="font-bold text-foreground text-xl">Análise de Volatilidade (Base Liga)</h3>
+                                    <p className="mt-1 text-muted-foreground text-xs uppercase tracking-widest">
+                                        Candlestick diário ({chartData.length} {chartData.length === 1 ? 'dia' : 'dias'})
+                                    </p>
                                 </div>
                                 <div className="flex gap-4 font-bold text-[10px]">
                                     <div className="flex items-center gap-1"><div className="bg-success rounded-full w-2 h-2"></div> ALTA</div>
@@ -351,6 +431,7 @@ export default function CardDetails() {
                                             fontSize={11}
                                             tickLine={false}
                                             axisLine={false}
+                                            interval={0}
                                             dy={10}
                                         />
                                         <YAxis
@@ -380,6 +461,7 @@ export default function CardDetails() {
                                         {/* A Barra que "hackeia" o gráfico para virar vela */}
                                         <Bar
                                             dataKey="displayPrice"
+                                            barSize={36}
                                             shape={<CandlestickShape />}
                                         />
                                     </ComposedChart>
@@ -388,7 +470,7 @@ export default function CardDetails() {
 
                             <div className="bg-background/50 mt-6 p-4 border border-border rounded-xl">
                                 <p className="text-[11px] text-muted-foreground italic leading-relaxed">
-                                    O corpo da vela representa a variação entre o preço médio de ontem e hoje. O pavio (linha) indica a dispersão total entre o menor e o maior preço encontrado no mercado.
+                                    O corpo da vela representa a variação entre o preço médio de ontem e hoje na liga. O pavio (linha) indica a dispersão total entre o menor e o maior preço da liga no período. Esses valores são de referência e, no futuro, serão gerados pelo BountyTracker.
                                 </p>
                             </div>
                         </div>
@@ -403,7 +485,7 @@ export default function CardDetails() {
                     onClick={() => setIsCardPreviewOpen(false)}
                 >
                     <div
-                        className="w-full max-w-[260px] sm:max-w-[300px] md:max-w-[340px]"
+                        className="w-full max-w-65 sm:max-w-75 md:max-w-85"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <button

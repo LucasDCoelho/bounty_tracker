@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { trackEvent } from '@/lib/telemetry';
 import { ArrowLeft, Store, Search, TrendingDown, MessageCircle, AlertTriangle } from 'lucide-react';
 
 type BuylistOffer = {
@@ -67,6 +68,12 @@ export default function BuylistPanel() {
   };
 
   useEffect(() => { fetchOffers(); }, []);
+
+  useEffect(() => {
+    trackEvent({
+      eventName: 'buylist_view',
+    });
+  }, []);
 
   const filteredOffers = offers.filter(o => 
     (o.card?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
