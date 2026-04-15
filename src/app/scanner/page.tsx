@@ -26,7 +26,7 @@ type ScanApiResult = {
 };
 
 const SIGNATURE_SIZE = 32;
-const MIN_VISUAL_CONFIDENCE = 0.58;
+const MIN_VISUAL_CONFIDENCE = 0.82; // Aumentamos a confiança mínima com o novo algoritmo de hash
 const CARD_ASPECT_RATIO = 63 / 88;
 
 function normalizeCodes(result: ScanApiResult) {
@@ -180,43 +180,70 @@ function loadImage(src: string) {
   });
 }
 
-async function buildSignature(src: string) {
+// Algoritmo de Assinatura Visual (dHash - Difference Hash)
+// Converte a imagem em uma "impressão digital" binária, que é mais resistente
+// a variações de iluminação e compressão do que a comparação direta de pixels.
+async function buildSignature(src: string): Promise<number> {
   const image = await loadImage(src);
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const context = canvas.getContext('2d');
 
   if (!context) {
     throw new Error('Canvas indisponível para assinatura visual.');
   }
 
-  canvas.width = SIGNATURE_SIZE;
-  canvas.height = SIGNATURE_SIZE;
-  context.drawImage(image, 0, 0, SIGNATURE_SIZE, SIGNATURE_SIZE);
+  // 1. Redimensiona para um tamanho pequeno. Usamos uma largura maior para comparar pixels adjacentes.
+  const hashWidth = SIGNATURE_SIZE + 1;
+  const hashHeight = SIGNATURE_SIZE;
+  canvas.width = hashWidth;
+  canvas.height = hashHeight;
+  context.drawImage(image, 0, 0, hashWidth, hashHeight);
 
-  const { data } = context.getImageData(0, 0, SIGNATURE_SIZE, SIGNATURE_SIZE);
-  const signature = new Float32Array(SIGNATURE_SIZE * SIGNATURE_SIZE);
-
-  for (let i = 0; i < signature.length; i += 1) {
+  // 2. Converte para escala de cinza para focar na estrutura e não na cor.
+  const { data } = context.getImageData(0, 0, hashWidth, hashHeight);
+  const grayscale = new Uint8Array(hashWidth * hashHeight);
+  for (let i = 0; i < grayscale.length; i++) {
     const base = i * 4;
     const r = data[base];
     const g = data[base + 1];
     const b = data[base + 2];
-    signature[i] = r * 0.299 + g * 0.587 + b * 0.114;
+    grayscale[i] = r * 0.299 + g * 0.587 + b * 0.114;
   }
 
-  return signature;
+  // 3. Compara pixels adjacentes para gerar o hash.
+  // Se o pixel da esquerda é mais claro que o da direita, o bit é 1.
+  let hash = 0; // Usamos BigInt para armazenar o hash de 1024 bits (32*32)
+  let bit = 0;
+  for (let y = 0; y < hashHeight; y++) {
+    for (let x = 0; x < hashWidth - 1; x++) {
+      const index = y * hashWidth + x;
+      if (grayscale[index] > grayscale[index + 1]) {
+        hash |= (1 << bit);
+      }
+      bit++;
+    }
+  }
+
+  return hash;
 }
 
-function similarityScore(a: Float32Array, b: Float32Array) {
-  if (a.length !== b.length) return 0;
+// Conta o número de bits '1' em um BigInt (popcount)
+function popcount(n: number): number {
+  let count = 0;
+  while (n > 0) {
+    n &= (n - 1);
 
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    diff += Math.abs(a[i] - b[i]);
+    count++;
   }
+  return count;
+}
 
-  const avgDiff = diff / a.length;
-  return Math.max(0, 1 - avgDiff / 255);
+// Calcula a Distância de Hamming entre dois hashes (quantos bits são diferentes)
+// e a converte para uma pontuação de similaridade (0 a 1).
+function similarityScore(a: number, b: number): number {
+  const totalBits = SIGNATURE_SIZE * SIGNATURE_SIZE;
+  const hammingDistance = popcount(a ^ b);
+  return 1 - (hammingDistance / totalBits);
 }
 
 async function rankVisualMatches(capturedDataUrl: string, candidates: CardResult[]) {
