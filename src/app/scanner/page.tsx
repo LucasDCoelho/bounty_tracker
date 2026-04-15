@@ -219,9 +219,9 @@ function similarityScore(a: Float32Array, b: Float32Array) {
   return Math.max(0, 1 - avgDiff / 255);
 }
 
-async function findBestVisualMatch(capturedDataUrl: string, candidates: CardResult[]) {
+async function rankVisualMatches(capturedDataUrl: string, candidates: CardResult[]) {
   const capturedSignature = await buildSignature(capturedDataUrl);
-  let best: { card: CardResult; score: number } | null = null;
+  const scoredCandidates: { card: CardResult; score: number }[] = [];
 
   for (const candidate of candidates) {
     if (!candidate.image_url) continue;
@@ -229,16 +229,13 @@ async function findBestVisualMatch(capturedDataUrl: string, candidates: CardResu
     try {
       const cardSignature = await buildSignature(candidate.image_url);
       const score = similarityScore(capturedSignature, cardSignature);
-
-      if (!best || score > best.score) {
-        best = { card: candidate, score };
-      }
+      scoredCandidates.push({ card: candidate, score });
     } catch {
       // Ignora candidato que não consegue carregar imagem/CORS.
     }
   }
 
-  return best;
+  return scoredCandidates.sort((a, b) => b.score - a.score);
 }
 
 export default function CardScanner() {
@@ -354,9 +351,11 @@ export default function CardScanner() {
       const variants = getVariantHints(result);
 
       const candidatePool = await loadCandidatePool(codes, nameHints, variants);
-      const visualMatch = candidatePool.length > 0
-        ? await findBestVisualMatch(imageData, candidatePool)
-        : null;
+      const rankedVisuals = candidatePool.length > 0
+        ? await rankVisualMatches(imageData, candidatePool)
+        : [];
+
+      const bestVisual = rankedVisuals[0] || null;
 
       const textFallback = candidatePool
         .slice()
@@ -365,16 +364,21 @@ export default function CardScanner() {
       let matchedCard: CardResult | null = null;
       let matchedBy: 'visual' | 'code' | 'text' | null = null;
 
-      if (visualMatch && visualMatch.score >= MIN_VISUAL_CONFIDENCE) {
-        matchedCard = visualMatch.card;
+      if (bestVisual && bestVisual.score >= MIN_VISUAL_CONFIDENCE) {
+        matchedCard = bestVisual.card;
         matchedBy = 'visual';
-        setVisualConfidence(visualMatch.score);
       } else {
         const exactCode = codes[0] || null;
         if (exactCode) {
-          const exactMatch = candidatePool.find((card) => String(card.card_number || '').toUpperCase() === exactCode);
-          if (exactMatch) {
-            matchedCard = exactMatch;
+          const exactMatches = candidatePool.filter((card) => String(card.card_number || '').toUpperCase() === exactCode);
+          if (exactMatches.length > 0) {
+            if (exactMatches.length === 1) {
+              matchedCard = exactMatches[0];
+            } else {
+              // Desempate de Artes Paralelas: escolhemos a mais semelhante visualmente dentro do mesmo código
+              const bestAmongExact = rankedVisuals.find(rv => String(rv.card.card_number || '').toUpperCase() === exactCode);
+              matchedCard = bestAmongExact ? bestAmongExact.card : exactMatches[0];
+            }
             matchedBy = 'code';
           }
         }
@@ -383,15 +387,14 @@ export default function CardScanner() {
           matchedCard = textFallback;
           matchedBy = 'text';
         }
-
-        if (visualMatch) {
-          setVisualConfidence(visualMatch.score);
-        }
       }
 
       if (matchedCard) {
         setFoundCard(matchedCard);
         setLastScannedNumber(result.code || matchedCard.card_number);
+
+        const finalScore = rankedVisuals.find(rv => rv.card.id === matchedCard?.id)?.score;
+        setVisualConfidence(finalScore ?? null);
 
         trackEvent({
           eventName: 'scanner_success',
@@ -400,12 +403,12 @@ export default function CardScanner() {
             cardName: matchedCard.name,
             cardNumber: matchedCard.card_number,
             matchedBy,
-            visualConfidence: visualMatch?.score ?? null,
+            visualConfidence: finalScore ?? null,
             candidateCount: candidatePool.length,
           },
         });
       } else {
-        setVisualConfidence(visualMatch?.score ?? null);
+        setVisualConfidence(bestVisual?.score ?? null);
         trackEvent({
           eventName: 'scanner_no_match',
           properties: {
